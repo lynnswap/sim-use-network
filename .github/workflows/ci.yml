@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Build release executable
+        run: swift build -c release
+
+      - name: Run tests
+        run: swift test
+
+      - name: Run runtime shim unit tests
+        run: ./scripts/test-runtime-shim.sh
+
+      - name: Compile runtime shim for every Simulator SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source_file="Sources/SimUseNetworkCore/Resources/RuntimeArtifacts/NetworkUnavailableShim.c"
+          specifications=(
+            "iphonesimulator|arm64-apple-ios26.0-simulator"
+            "watchsimulator|arm64-apple-watchos26.0-simulator"
+            "appletvsimulator|arm64-apple-tvos26.0-simulator"
+            "xrsimulator|arm64-apple-xros26.0-simulator"
+          )
+
+          for specification in "${specifications[@]}"; do
+            IFS='|' read -r sdk target <<< "$specification"
+            xcrun --sdk "$sdk" clang \
+              -target "$target" \
+              -std=c17 \
+              -Wall -Wextra -Wpedantic -Werror \
+              -fblocks \
+              -DSIM_USE_NETWORK_SHIM_ABI_VERSION=2 \
+              -fsyntax-only \
+              "$source_file"
+          done
