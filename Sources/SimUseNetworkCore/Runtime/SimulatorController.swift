@@ -18,19 +18,45 @@ private struct StateKeeperServiceState {
   let processIdentifier: Int32?
 }
 
+package struct SimulatorTimeouts: Sendable {
+  package let keeper: TimeInterval
+  package let daemon: TimeInterval
+  package let app: TimeInterval
+  package let notification: TimeInterval
+  package let mapping: TimeInterval
+  package let cleanup: TimeInterval
+
+  package static let standard = SimulatorTimeouts(
+    keeper: 5,
+    daemon: 15,
+    app: 10,
+    notification: 5,
+    mapping: 10,
+    cleanup: 10
+  )
+}
+
 package struct SimulatorController {
   private static let daemonLabel = "com.apple.nsurlsessiond"
   private static let networkChangeNotification = "com.apple.system.SystemConfiguration.nwi"
 
   private let processes: ProcessClient
+  private let timeouts: SimulatorTimeouts
   private let xcrun = URL(filePath: "/usr/bin/xcrun")
 
-  package init(processes: ProcessClient = .live) {
+  package init(
+    processes: ProcessClient = .live,
+    timeouts: SimulatorTimeouts = .standard
+  ) {
     self.processes = processes
+    self.timeouts = timeouts
   }
 
   package func inheritingLease(from lock: DeviceLock) -> SimulatorController {
-    SimulatorController(processes: processes.inheritingLease(from: lock))
+    SimulatorController(
+      processes: processes.inheritingLease(from: lock),
+      timeouts: timeouts
+    )
   }
 
   package func resolveDaemonServiceTarget(
@@ -129,13 +155,13 @@ package struct SimulatorController {
         "launchctl", "bootout", record.keeperServiceTarget,
       ]
     )
-    for _ in 0..<20 {
-      if try stateKeeperServiceState(record) == nil {
-        return
-      }
-      usleep(20_000)
-    }
-    guard try stateKeeperServiceState(record) == nil else {
+    guard
+      try waitUntil(
+        timeout: timeouts.cleanup,
+        condition: {
+          try stateKeeperServiceState(record) == nil
+        })
+    else {
       throw SimUseNetworkError.verificationFailed(
         "The Darwin state keeper is still running after bootout."
       )
@@ -215,24 +241,24 @@ package struct SimulatorController {
     serviceTarget: String,
     processIdentifier: Int32
   ) throws {
-    var ready = false
-    for _ in 0..<20 {
-      _ = try processes.checked(
-        xcrun,
-        [
-          "simctl", "spawn", record.device.udid,
-          "notifyutil", "-s", record.keeperReadyName, "1",
-        ]
-      )
-      if try readNotifyState(
-        name: record.keeperReadyName,
-        deviceUDID: record.device.udid
-      ) == 1 {
-        ready = true
-        break
-      }
-      usleep(20_000)
-    }
+    let ready = try waitUntil(
+      timeout: timeouts.keeper,
+      condition: {
+        _ = try processes.checked(
+          xcrun,
+          [
+            "simctl", "spawn", record.device.udid,
+            "notifyutil", "-s", record.keeperReadyName, "1",
+          ]
+        )
+        if try readNotifyState(
+          name: record.keeperReadyName,
+          deviceUDID: record.device.udid
+        ) == 1 {
+          return true
+        }
+        return false
+      })
     guard ready else {
       throw SimUseNetworkError.verificationFailed(
         "The Darwin state keeper did not register before the readiness deadline."
@@ -303,21 +329,25 @@ package struct SimulatorController {
     serviceTarget: String,
     processIdentifier: Int32
   ) throws {
-    for _ in 0..<30 {
-      let result = try processes.checked(
-        xcrun,
-        ["simctl", "spawn", deviceUDID, "launchctl", "print", serviceTarget]
+    let ready = try waitUntil(
+      timeout: timeouts.daemon,
+      condition: {
+        let result = try processes.checked(
+          xcrun,
+          ["simctl", "spawn", deviceUDID, "launchctl", "print", serviceTarget]
+        )
+        if Self.parseProcessIdentifier(result.standardOutput) == processIdentifier,
+          Self.parseServiceIsRunning(result.standardOutput)
+        {
+          return true
+        }
+        return false
+      })
+    guard ready else {
+      throw SimUseNetworkError.verificationFailed(
+        "The URL loading daemon did not reach running state with pid \(processIdentifier)."
       )
-      if Self.parseProcessIdentifier(result.standardOutput) == processIdentifier,
-        Self.parseServiceIsRunning(result.standardOutput)
-      {
-        return
-      }
-      usleep(20_000)
     }
-    throw SimUseNetworkError.verificationFailed(
-      "The URL loading daemon did not reach running state with pid \(processIdentifier)."
-    )
   }
 
   package func daemonProcessIdentifier(
@@ -390,18 +420,19 @@ package struct SimulatorController {
     deviceUDID: String,
     daemonServiceTarget: String
   ) throws -> Bool {
-    for _ in 0..<30 {
-      let processIdentifiers = try appProcessIdentifiers(
-        bundleIdentifier: bundleIdentifier,
-        deviceUDID: deviceUDID,
-        daemonServiceTarget: daemonServiceTarget
-      )
-      if processIdentifiers.contains(expectedProcessIdentifier) {
-        return true
-      }
-      usleep(20_000)
-    }
-    return false
+    try waitUntil(
+      timeout: timeouts.app,
+      condition: {
+        let processIdentifiers = try appProcessIdentifiers(
+          bundleIdentifier: bundleIdentifier,
+          deviceUDID: deviceUDID,
+          daemonServiceTarget: daemonServiceTarget
+        )
+        if processIdentifiers.contains(expectedProcessIdentifier) {
+          return true
+        }
+        return false
+      })
   }
 
   package func isAppProcessCurrent(_ record: SessionRecord) throws -> Bool {
@@ -446,13 +477,14 @@ package struct SimulatorController {
         )
       }
     }
-    for _ in 0..<30 {
-      if try injectedAppProcessIdentifiers(record).isEmpty {
-        return true
-      }
-      usleep(20_000)
-    }
-    return try injectedAppProcessIdentifiers(record).isEmpty
+    return try waitUntil(
+      timeout: timeouts.cleanup,
+      condition: {
+        if try injectedAppProcessIdentifiers(record).isEmpty {
+          return true
+        }
+        return false
+      })
   }
 
   private func injectedAppProcessIdentifiers(_ record: SessionRecord) throws -> [Int32] {
@@ -539,13 +571,14 @@ package struct SimulatorController {
     name: String,
     deviceUDID: String
   ) throws -> Bool {
-    for _ in 0..<30 {
-      if try readNotifyState(name: name, deviceUDID: deviceUDID) == expectedValue {
-        return true
-      }
-      usleep(20_000)
-    }
-    return false
+    try waitUntil(
+      timeout: timeouts.notification,
+      condition: {
+        if try readNotifyState(name: name, deviceUDID: deviceUDID) == expectedValue {
+          return true
+        }
+        return false
+      })
   }
 
   package func readAvailability(
@@ -600,18 +633,19 @@ package struct SimulatorController {
     libraryURL: URL,
     processIdentifier: Int32
   ) throws -> Bool {
-    for _ in 0..<20 {
-      let result = try processes.run(
-        URL(filePath: "/usr/bin/vmmap"),
-        ["-w", String(processIdentifier)],
-        [:]
-      )
-      if result.status == 0, result.standardOutput.contains(libraryURL.path) {
-        return true
-      }
-      usleep(20_000)
-    }
-    return false
+    try waitUntil(
+      timeout: timeouts.mapping,
+      condition: {
+        let result = try processes.run(
+          URL(filePath: "/usr/bin/vmmap"),
+          ["-w", String(processIdentifier)],
+          [:]
+        )
+        if result.status == 0, result.standardOutput.contains(libraryURL.path) {
+          return true
+        }
+        return false
+      })
   }
 
   package func isProcessRunning(_ processIdentifier: Int32) -> Bool {
@@ -619,6 +653,22 @@ package struct SimulatorController {
       return true
     }
     return errno == EPERM
+  }
+
+  private func waitUntil(
+    timeout: TimeInterval,
+    condition: () throws -> Bool
+  ) rethrows -> Bool {
+    let deadline = ProcessInfo.processInfo.systemUptime + timeout
+    while true {
+      if try condition() {
+        return true
+      }
+      if ProcessInfo.processInfo.systemUptime >= deadline {
+        return false
+      }
+      usleep(50_000)
+    }
   }
 
   private static func parseCanonicalServiceTarget(_ output: String) -> String? {
