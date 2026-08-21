@@ -228,6 +228,28 @@ struct SourceInstallerTests {
   }
 
   @Test
+  func debugInstallerInvocationInstallsTheReleaseArtifacts() throws {
+    let fixture = try makeCheckoutFixture(installerConfiguration: "debug")
+    defer { withExtendedLifetime(fixture) {} }
+    let prefix = fixture.root.appendingPathComponent("debug-invocation", isDirectory: true)
+
+    _ = try SourceInstaller(
+      process: InstallProcess { _, _, _, _ in 0 },
+      makeIdentifier: { "release-payload" }
+    ).install(
+      installerExecutableURL: fixture.installer,
+      prefix: prefix.path,
+      environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"]
+    )
+
+    let installedExecutable = prefix.appendingPathComponent(
+      "libexec/sim-use-network/payloads/release-payload/sim-use-network")
+    #expect(
+      try String(contentsOf: installedExecutable, encoding: .utf8).contains(
+        "release artifact"))
+  }
+
+  @Test
   func swiftBuildContentsResourcesLayoutIsAccepted() throws {
     let fixture = try makeCheckoutFixture(swiftBuildLayout: true)
     defer { withExtendedLifetime(fixture) {} }
@@ -384,7 +406,8 @@ struct SourceInstallerTests {
   }
 
   private func makeCheckoutFixture(
-    swiftBuildLayout: Bool = false
+    swiftBuildLayout: Bool = false,
+    installerConfiguration: String = "release"
   ) throws -> CheckoutFixture {
     let temporaryDirectory = try TestTemporaryDirectory(prefix: "sim-use-network-installer-tests")
     let root = temporaryDirectory.url
@@ -393,9 +416,18 @@ struct SourceInstallerTests {
     let build = root.appendingPathComponent(
       ".build/arm64-apple-macosx/release", isDirectory: true)
     try FileManager.default.createDirectory(at: build, withIntermediateDirectories: true)
-    let installer = build.appendingPathComponent("sim-use-network-install")
+    try FileManager.default.createSymbolicLink(
+      atPath: root.appendingPathComponent(".build/release").path,
+      withDestinationPath: "arm64-apple-macosx/release"
+    )
+    let installerBuild = root.appendingPathComponent(
+      ".build/arm64-apple-macosx/\(installerConfiguration)", isDirectory: true)
+    let installer = installerBuild.appendingPathComponent("sim-use-network-install")
     try makeExecutable(at: installer)
-    try makeExecutable(at: build.appendingPathComponent("sim-use-network"))
+    try makeExecutable(
+      at: build.appendingPathComponent("sim-use-network"),
+      contents: "#!/bin/sh\n# release artifact\nexit 0\n"
+    )
 
     let coreBundle = build.appendingPathComponent(
       "sim-use-network_SimUseNetworkCore.bundle", isDirectory: true)
@@ -428,8 +460,11 @@ struct SourceInstallerTests {
     )
   }
 
-  private func makeExecutable(at url: URL) throws {
-    try write("#!/bin/sh\nexit 0\n", to: url)
+  private func makeExecutable(
+    at url: URL,
+    contents: String = "#!/bin/sh\nexit 0\n"
+  ) throws {
+    try write(contents, to: url)
     try FileManager.default.setAttributes(
       [.posixPermissions: 0o755],
       ofItemAtPath: url.path

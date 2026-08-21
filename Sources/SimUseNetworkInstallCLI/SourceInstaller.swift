@@ -82,7 +82,6 @@ package struct SourceInstaller {
       from: installerExecutableURL,
       fileManager: fileManager
     )
-    let sourceDirectory = installerExecutableURL.deletingLastPathComponent()
     let layout = try Self.layout(
       prefix: prefix,
       environment: environment,
@@ -96,6 +95,14 @@ package struct SourceInstaller {
       in: repositoryRoot,
       output: .inherit
     )
+    let sourceDirectory = repositoryRoot.appendingPathComponent(
+      ".build/release", isDirectory: true
+    ).resolvingSymlinksInPath().standardizedFileURL
+    guard try itemKind(at: sourceDirectory) == .directory else {
+      throw SourceInstallError.message(
+        "SwiftPM did not produce the release build directory at \(sourceDirectory.path)."
+      )
+    }
     try validateArtifacts(in: sourceDirectory)
     try prepareInstallDirectories(layout)
     let installLock = try SourceInstallLock(
