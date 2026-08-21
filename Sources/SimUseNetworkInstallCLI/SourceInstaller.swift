@@ -59,12 +59,6 @@ package struct SourceInstaller {
     case other
   }
 
-  private enum ExistingCommand {
-    case absent
-    case managed
-    case legacyDirectInstall
-  }
-
   private let fileManager: FileManager
   private let process: InstallProcess
   private let makeIdentifier: () -> String
@@ -82,7 +76,6 @@ package struct SourceInstaller {
   package func install(
     installerExecutableURL: URL,
     prefix: String?,
-    migrateLegacyInstall: Bool = false,
     environment: [String: String]
   ) throws -> [String] {
     let repositoryRoot = try Self.repositoryRoot(
@@ -95,10 +88,7 @@ package struct SourceInstaller {
       environment: environment,
       currentDirectory: repositoryRoot
     )
-    _ = try validateExistingDestinations(
-      layout,
-      migrateLegacyInstall: migrateLegacyInstall
-    )
+    try validateExistingDestination(layout)
 
     try process.checked(
       URL(fileURLWithPath: "/usr/bin/env"),
@@ -112,10 +102,7 @@ package struct SourceInstaller {
       url: layout.installRoot.appendingPathComponent("install.lock", isDirectory: false)
     )
     defer { withExtendedLifetime(installLock) {} }
-    let existingCommand = try validateExistingDestinations(
-      layout,
-      migrateLegacyInstall: migrateLegacyInstall
-    )
+    try validateExistingDestination(layout)
 
     let identifier = makeIdentifier()
     guard !identifier.isEmpty,
@@ -221,11 +208,6 @@ package struct SourceInstaller {
       "Installed runtime payload to \(finalPayload.path)",
     ]
     lines.append(
-      contentsOf: postCommitMessages(
-        layout: layout,
-        existingCommand: existingCommand
-      ))
-    lines.append(
       contentsOf: InstallPathGuidance(
         commandDirectory: layout.binDirectory,
         environment: environment,
@@ -321,11 +303,8 @@ package struct SourceInstaller {
     )
   }
 
-  private func validateExistingDestinations(
-    _ layout: Layout,
-    migrateLegacyInstall: Bool
-  ) throws -> ExistingCommand {
-    guard let commandKind = try itemKind(at: layout.command) else { return .absent }
+  private func validateExistingDestination(_ layout: Layout) throws {
+    guard let commandKind = try itemKind(at: layout.command) else { return }
     guard commandKind == .regularFile else {
       throw SourceInstallError.message(
         "Refusing to replace a non-regular command at \(layout.command.path)."
@@ -334,27 +313,11 @@ package struct SourceInstaller {
     if let contents = try? String(contentsOf: layout.command, encoding: .utf8),
       try managedWrapperPayload(contents, layout: layout) != nil
     {
-      return .managed
+      return
     }
-
-    let legacyArtifactsAreComplete: Bool
-    do {
-      try validateArtifacts(in: layout.binDirectory)
-      legacyArtifactsAreComplete = true
-    } catch {
-      legacyArtifactsAreComplete = false
-    }
-    guard legacyArtifactsAreComplete else {
-      throw SourceInstallError.message(
-        "Refusing to replace an unrecognized command at \(layout.command.path). Move it aside, then rerun the installer."
-      )
-    }
-    guard migrateLegacyInstall else {
-      throw SourceInstallError.message(
-        "The former bin-adjacent sim-use-network layout exists at \(layout.binDirectory.path). Rerun once with --migrate-legacy-install to replace its command while retaining its resource bundles."
-      )
-    }
-    return .legacyDirectInstall
+    throw SourceInstallError.message(
+      "Refusing to replace an unrecognized command at \(layout.command.path). Move it aside, then rerun the installer."
+    )
   }
 
   private func validateArtifacts(in directory: URL) throws {
@@ -455,19 +418,6 @@ package struct SourceInstaller {
       return payload
     }
     return nil
-  }
-
-  private func postCommitMessages(
-    layout: Layout,
-    existingCommand: ExistingCommand
-  ) -> [String] {
-    var messages: [String] = []
-    if existingCommand == .legacyDirectInstall {
-      messages.append(
-        "Retained the legacy resource bundles in \(layout.binDirectory.path) for commands that may already be running."
-      )
-    }
-    return messages
   }
 
   private func itemKind(at url: URL) throws -> ItemKind? {

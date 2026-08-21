@@ -48,21 +48,12 @@ The default prefix is `~/.local`. The installer publishes a command wrapper at
 `~/.local/bin/sim-use-network` and keeps the executable and both required
 resource bundles together under `~/.local/libexec/sim-use-network`.
 Each wrapper targets one immutable payload. Older payloads are retained so a
-command that was already running can continue to resolve its matching resources;
-the one-time migration from the former bin-adjacent layout retains its two
-legacy bundles for the same reason.
+command that was already running can continue to resolve its matching resources.
 
 Use another prefix when needed:
 
 ```bash
 swift run -c release sim-use-network-install --prefix /path/to/prefix
-```
-
-If you installed an earlier checkout using this repository's former manual
-three-artifact copy instructions, opt into that exact migration once:
-
-```bash
-swift run -c release sim-use-network-install --migrate-legacy-install
 ```
 
 If the command directory is missing from `PATH` or another command shadows the

@@ -252,96 +252,20 @@ struct SourceInstallerTests {
   }
 
   @Test
-  func exactLegacyDirectInstallIsMigrated() throws {
-    let fixture = try makeCheckoutFixture()
-    defer { withExtendedLifetime(fixture) {} }
-    let prefix = fixture.root.appendingPathComponent("legacy", isDirectory: true)
-    let legacyBin = prefix.appendingPathComponent("bin", isDirectory: true)
-    try FileManager.default.createDirectory(at: legacyBin, withIntermediateDirectories: true)
-    let build = fixture.installer.deletingLastPathComponent()
-    for artifact in SourceInstaller.artifacts {
-      try FileManager.default.copyItem(
-        at: build.appendingPathComponent(artifact.name),
-        to: legacyBin.appendingPathComponent(artifact.name)
-      )
-    }
-
-    _ = try SourceInstaller(
-      process: InstallProcess { _, _, _, _ in 0 },
-      makeIdentifier: { "migrated" }
-    ).install(
-      installerExecutableURL: fixture.installer,
-      prefix: prefix.path,
-      migrateLegacyInstall: true,
-      environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"]
-    )
-
-    let wrapper = try String(
-      contentsOf: legacyBin.appendingPathComponent("sim-use-network"),
-      encoding: .utf8
-    )
-    #expect(wrapper.contains("installer-managed wrapper"))
-    #expect(
-      FileManager.default.fileExists(
-        atPath: legacyBin.appendingPathComponent(
-          "sim-use-network_SimUseNetworkCore.bundle"
-        ).path))
-    #expect(
-      FileManager.default.fileExists(
-        atPath: legacyBin.appendingPathComponent(
-          "sim-use-network_SimUseNetworkCLI.bundle"
-        ).path))
-  }
-
-  @Test
-  func retainedLegacyBundlesDoNotAuthorizeAnUnrelatedReplacementCommand() throws {
-    let fixture = try makeCheckoutFixture()
-    defer { withExtendedLifetime(fixture) {} }
-    let prefix = fixture.root.appendingPathComponent("legacy-tamper", isDirectory: true)
-    let legacyBin = prefix.appendingPathComponent("bin", isDirectory: true)
-    try FileManager.default.createDirectory(at: legacyBin, withIntermediateDirectories: true)
-    let build = fixture.installer.deletingLastPathComponent()
-    for artifact in SourceInstaller.artifacts {
-      try FileManager.default.copyItem(
-        at: build.appendingPathComponent(artifact.name),
-        to: legacyBin.appendingPathComponent(artifact.name)
-      )
-    }
-    let process = InstallProcess { _, _, _, _ in 0 }
-    _ = try SourceInstaller(
-      process: process,
-      makeIdentifier: { "migrated" }
-    ).install(
-      installerExecutableURL: fixture.installer,
-      prefix: prefix.path,
-      migrateLegacyInstall: true,
-      environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"]
-    )
-
-    let command = legacyBin.appendingPathComponent("sim-use-network")
-    try makeExecutable(at: command)
-    let replacement = try Data(contentsOf: command)
-
-    #expect(throws: (any Error).self) {
-      _ = try SourceInstaller(
-        process: process,
-        makeIdentifier: { "blocked" }
-      ).install(
-        installerExecutableURL: fixture.installer,
-        prefix: prefix.path,
-        environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"]
-      )
-    }
-    #expect(try Data(contentsOf: command) == replacement)
-  }
-
-  @Test
-  func unrecognizedExistingCommandIsNotOverwritten() throws {
+  func unmarkedDirectLayoutIsNotMigrated() throws {
     let fixture = try makeCheckoutFixture()
     defer { withExtendedLifetime(fixture) {} }
     let prefix = fixture.root.appendingPathComponent("occupied", isDirectory: true)
-    let command = prefix.appendingPathComponent("bin/sim-use-network")
-    try makeExecutable(at: command)
+    let bin = prefix.appendingPathComponent("bin", isDirectory: true)
+    try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+    let build = fixture.installer.deletingLastPathComponent()
+    for artifact in SourceInstaller.artifacts {
+      try FileManager.default.copyItem(
+        at: build.appendingPathComponent(artifact.name),
+        to: bin.appendingPathComponent(artifact.name)
+      )
+    }
+    let command = bin.appendingPathComponent("sim-use-network")
     let original = try Data(contentsOf: command)
 
     #expect(throws: (any Error).self) {

@@ -100,13 +100,10 @@ rename publishes it, so a validation failure never changes the previous command.
 Old payloads are retained: a process launched by the previous wrapper can read
 its bundled C source after a later installation has completed. Removing a
 cohort without a process-lifetime lease would break that invariant or mix CLI
-and shim generations. The one-time migration from the former bin-adjacent
-layout retains those legacy bundles for the same reason.
+and shim generations.
 
-The installer recognizes its ownership marker and the exact legacy layout
-previously documented by this repository. Migrating that unmarked layout
-requires the explicit `--migrate-legacy-install` authority; the default path
-refuses to replace an unrelated or merely legacy-shaped command. PATH guidance
+The installer recognizes only its versioned ownership marker and wrapper
+contract. It refuses to replace an unrelated or unmarked command. PATH guidance
 is output only: the installer never edits or sources shell profiles.
 
 ## Supported contract

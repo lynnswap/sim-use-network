@@ -20,11 +20,6 @@ struct SimUseNetworkInstall: ParsableCommand {
   )
   var prefix: String?
 
-  @Flag(
-    help: "Replace the exact bin-adjacent artifact layout documented before the source installer."
-  )
-  var migrateLegacyInstall = false
-
   mutating func validate() throws {
     if let prefix, prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       throw ValidationError("--prefix must not be empty")
@@ -39,7 +34,6 @@ struct SimUseNetworkInstall: ParsableCommand {
     let lines = try SourceInstaller().install(
       installerExecutableURL: executableURL,
       prefix: prefix,
-      migrateLegacyInstall: migrateLegacyInstall,
       environment: ProcessInfo.processInfo.environment
     )
     for line in lines {

@@ -12,7 +12,7 @@ struct InstallCommandTests {
 
     #expect(help.contains("swift run -c release sim-use-network-install"))
     #expect(help.contains("--prefix"))
-    #expect(help.contains("--migrate-legacy-install"))
+    #expect(!help.contains("--migrate-legacy-install"))
     #expect(!help.contains(".build/release/sim-use-network-install"))
   }
 }
