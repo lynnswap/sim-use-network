@@ -7,14 +7,22 @@
    Mac network, then performs an explicit cleanup.
 2. An agent uses `sim-use-network` for network state and `sim-use` for the
    observe-act-verify UI loop against the same device UDID.
+3. A developer runs one source-checkout command that builds the CLI, publishes
+   its complete resource payload, and receives actionable PATH guidance.
 
-The package distributes one executable product. There is no public Swift library
-surface: `SimUseNetworkCore` is an internal owner boundary consumed only by the
-CLI and its tests.
+The package distributes the runtime CLI and a source installer as separate
+executable products. There is no public Swift library surface:
+`SimUseNetworkCore` is an internal owner boundary consumed only by the runtime
+CLI and its tests. `SimUseNetworkInstallCLI` has no module dependency on the
+runtime targets; it asks SwiftPM to build the runtime product and installs the
+resulting executable and resource bundles as one artifact set.
 
 ```text
 SimUseNetworkCLI -> SimUseNetworkCore -> xcrun / simctl / launchctl
                                       -> per-platform Simulator shim
+
+SimUseNetworkInstallCLI -> swift build --product sim-use-network
+                        -> ~/.local/libexec payload + ~/.local/bin wrapper
 ```
 
 The C shim is a resource, not a SwiftPM target. The host executable and a
@@ -37,6 +45,7 @@ one platform-specific artifact with the selected Xcode toolchain during
 | Applied-state completion | Per-process app/daemon acknowledgement keys |
 | Darwin notify registration lifetime | Per-session launchd state keeper |
 | Rollback and complete removal | `NetworkSessionController` |
+| Source artifact set, staged activation, transaction cleanup, and PATH guidance | `SourceInstaller` |
 
 The session journal is recovery evidence, not a second network-state source of
 truth. The Darwin notification state controls the live shim behavior.
@@ -73,6 +82,32 @@ clear app/daemon acknowledgements
 -> post the NWI refresh notification
 -> revalidate app, daemon, keeper, and notifyd identities
 ```
+
+## Source installation
+
+The installer first builds and validates all three required artifacts: the host
+executable, the Core resource bundle, and the CLI resource bundle. It stages
+them under one installer-owned payload directory and smoke-tests the staged
+CLI before changing the active install. A prefix-local lock serializes updates.
+
+Activation atomically publishes a regular shell wrapper at
+`bin/sim-use-network`. The wrapper `exec`s one immutable payload identifier
+instead of exposing the executable as a symlink because SwiftPM resolves
+`Bundle.module` resources beside the invoked executable path. The candidate
+wrapper is smoke-tested against the final immutable payload before one atomic
+rename publishes it, so a validation failure never changes the previous command.
+
+Old payloads are retained: a process launched by the previous wrapper can read
+its bundled C source after a later installation has completed. Removing a
+cohort without a process-lifetime lease would break that invariant or mix CLI
+and shim generations. The one-time migration from the former bin-adjacent
+layout retains those legacy bundles for the same reason.
+
+The installer recognizes its ownership marker and the exact legacy layout
+previously documented by this repository. Migrating that unmarked layout
+requires the explicit `--migrate-legacy-install` authority; the default path
+refuses to replace an unrelated or merely legacy-shaped command. PATH guidance
+is output only: the installer never edits or sources shell profiles.
 
 ## Supported contract
 

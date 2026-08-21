@@ -9,7 +9,8 @@ let package = Package(
     .macOS("15.4")
   ],
   products: [
-    .executable(name: "sim-use-network", targets: ["SimUseNetworkCLI"])
+    .executable(name: "sim-use-network", targets: ["SimUseNetworkCLI"]),
+    .executable(name: "sim-use-network-install", targets: ["SimUseNetworkInstallCLI"]),
   ],
   dependencies: [
     .package(
@@ -34,6 +35,12 @@ let package = Package(
         .copy("Resources/skills")
       ]
     ),
+    .executableTarget(
+      name: "SimUseNetworkInstallCLI",
+      dependencies: [
+        .product(name: "ArgumentParser", package: "swift-argument-parser")
+      ]
+    ),
     .testTarget(
       name: "SimUseNetworkCoreTests",
       dependencies: ["SimUseNetworkCore"]
@@ -41,6 +48,10 @@ let package = Package(
     .testTarget(
       name: "SimUseNetworkCLITests",
       dependencies: ["SimUseNetworkCLI"]
+    ),
+    .testTarget(
+      name: "SimUseNetworkInstallCLITests",
+      dependencies: ["SimUseNetworkInstallCLI"]
     ),
   ]
 )
