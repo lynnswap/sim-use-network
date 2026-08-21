@@ -34,23 +34,32 @@ No `sudo`, Packet Filter rule, host route change, proxy, or DNS mutation is
 used. The executable's deployment target is macOS 15.4, but no prebuilt binary
 is currently distributed; building it requires the newer host/toolchain above.
 
-## Build from source
+## Install from source
+
+From a `sim-use-network` checkout, build and install the command in one step:
 
 ```bash
 git clone https://github.com/lynnswap/sim-use-network.git
 cd sim-use-network
-swift build -c release
-/usr/bin/install -d "$HOME/.local/bin"
-/usr/bin/install -m 755 .build/release/sim-use-network "$HOME/.local/bin/sim-use-network"
-/usr/bin/ditto \
-  .build/release/sim-use-network_SimUseNetworkCore.bundle \
-  "$HOME/.local/bin/sim-use-network_SimUseNetworkCore.bundle"
-/usr/bin/ditto \
-  .build/release/sim-use-network_SimUseNetworkCLI.bundle \
-  "$HOME/.local/bin/sim-use-network_SimUseNetworkCLI.bundle"
-export PATH="$HOME/.local/bin:$PATH"
-sim-use-network --help
+swift run -c release sim-use-network-install
 ```
+
+The default prefix is `~/.local`. The installer publishes a command wrapper at
+`~/.local/bin/sim-use-network` and keeps the executable and both required
+resource bundles together under `~/.local/libexec/sim-use-network`.
+Each wrapper targets one immutable payload. Older payloads are retained so a
+command that was already running can continue to resolve its matching resources.
+
+Use another prefix when needed:
+
+```bash
+swift run -c release sim-use-network-install --prefix /path/to/prefix
+```
+
+If the command directory is missing from `PATH` or another command shadows the
+new install, the installer prints shell-safe commands for the current session
+and, when it can identify a writable zsh or bash login profile, for future
+sessions. It never edits or sources a shell profile itself.
 
 ## Quick start
 

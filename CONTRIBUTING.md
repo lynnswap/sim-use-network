@@ -8,6 +8,7 @@ cleanup verification.
 ```bash
 swift build
 swift test
+./scripts/test-source-install.sh
 ./scripts/test-runtime-shim.sh
 actionlint
 git diff --check
