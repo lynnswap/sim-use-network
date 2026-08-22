@@ -33,13 +33,27 @@ let package = Package(
       ],
       resources: [
         .copy("Resources/skills")
+      ],
+      plugins: [
+        .plugin(name: "SimUseNetworkBuildInfoPlugin")
       ]
     ),
     .executableTarget(
       name: "SimUseNetworkInstallCLI",
       dependencies: [
         .product(name: "ArgumentParser", package: "swift-argument-parser")
+      ],
+      plugins: [
+        .plugin(name: "SimUseNetworkBuildInfoPlugin")
       ]
+    ),
+    .executableTarget(
+      name: "SimUseNetworkBuildInfoTool"
+    ),
+    .plugin(
+      name: "SimUseNetworkBuildInfoPlugin",
+      capability: .buildTool(),
+      dependencies: ["SimUseNetworkBuildInfoTool"]
     ),
     .testTarget(
       name: "SimUseNetworkCoreTests",
@@ -52,6 +66,10 @@ let package = Package(
     .testTarget(
       name: "SimUseNetworkInstallCLITests",
       dependencies: ["SimUseNetworkInstallCLI"]
+    ),
+    .testTarget(
+      name: "SimUseNetworkBuildInfoToolTests",
+      dependencies: ["SimUseNetworkBuildInfoTool"]
     ),
   ]
 )

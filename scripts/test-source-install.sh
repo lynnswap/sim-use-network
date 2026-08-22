@@ -24,11 +24,50 @@ test ! -e "$source_checkout/.build"
 
 prefix="$temporary_directory/prefix with space and 'quote"
 install_log="$temporary_directory/install.log"
+first_build_version="v9.8.6-test"
+first_expected_version="9.8.6-test"
+build_version="v9.8.7-test"
+expected_version="9.8.7-test"
+isolated_path="/usr/bin:/bin:/usr/sbin:/sbin"
+
+installer_version="$(
+  cd "$source_checkout"
+  HOME="$temporary_directory/home" \
+    PATH="$isolated_path" \
+    SHELL=/bin/zsh \
+    SIM_USE_NETWORK_BUILD_VERSION="$first_build_version" \
+    swift run -c release sim-use-network-install --version
+)"
+test "$installer_version" = "$first_expected_version"
+
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" \
+    SIM_USE_NETWORK_BUILD_VERSION="$first_build_version" \
+    swift build -c release --product sim-use-network
+)
+release_bin="$(
+  cd "$source_checkout"
+  PATH="$isolated_path" swift build -c release --show-bin-path
+)"
+test "$("$release_bin/sim-use-network" --version)" = "$first_expected_version"
+
+installer_version="$(
+  cd "$source_checkout"
+  HOME="$temporary_directory/home" \
+    PATH="$isolated_path" \
+    SHELL=/bin/zsh \
+    SIM_USE_NETWORK_BUILD_VERSION="$build_version" \
+    swift run -c release sim-use-network-install --version
+)"
+test "$installer_version" = "$expected_version"
 
 (
   cd "$source_checkout"
   HOME="$temporary_directory/home" \
+    PATH="$isolated_path" \
     SHELL=/bin/zsh \
+    SIM_USE_NETWORK_BUILD_VERSION="$build_version" \
     swift run -c release sim-use-network-install --prefix "$prefix"
 ) >"$install_log"
 
@@ -40,6 +79,28 @@ test -n "$payload_directory"
 test "$(printf '%s\n' "$payload_directory" | wc -l | tr -d ' ')" -eq 1
 test -f "$payload_directory/.sim-use-network-install"
 test -x "$payload_directory/sim-use-network"
+test "$("$command_path" --version)" = "$expected_version"
+
+mv "$source_checkout/README.md" "$source_checkout/README-renamed.md"
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" \
+    SIM_USE_NETWORK_BUILD_VERSION="$build_version" \
+    swift build -c release --product sim-use-network
+  PATH="$isolated_path" \
+    SIM_USE_NETWORK_BUILD_VERSION="$build_version" \
+    swift build -c release --product sim-use-network-install
+)
+test "$("$release_bin/sim-use-network" --version)" = "$expected_version"
+test "$("$release_bin/sim-use-network-install" --version)" = "$expected_version"
+
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" swift build -c release --product sim-use-network
+  PATH="$isolated_path" swift build -c release --product sim-use-network-install
+)
+test "$("$release_bin/sim-use-network" --version)" = "dev"
+test "$("$release_bin/sim-use-network-install" --version)" = "dev"
 
 bundle_resource_root() {
   local bundle="$1"
@@ -59,7 +120,6 @@ test -f "$installed_cli_resources/skills/sim-use-network/SKILL.md"
 grep -Fq "not on PATH" "$install_log"
 test ! -e "$temporary_directory/home/.zprofile"
 
-release_bin="$(cd "$source_checkout" && swift build -c release --show-bin-path)"
 core_bundle="$release_bin/sim-use-network_SimUseNetworkCore.bundle"
 cli_bundle="$release_bin/sim-use-network_SimUseNetworkCLI.bundle"
 mv "$core_bundle" "$core_bundle.source-install-hidden"

@@ -15,4 +15,9 @@ struct InstallCommandTests {
     #expect(!help.contains("--migrate-legacy-install"))
     #expect(!help.contains(".build/release/sim-use-network-install"))
   }
+
+  @Test
+  func commandUsesGeneratedBuildVersion() {
+    #expect(SimUseNetworkInstall.configuration.version == SimUseNetworkBuildInfo.version)
+  }
 }

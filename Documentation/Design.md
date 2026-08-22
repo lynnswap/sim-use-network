@@ -23,6 +23,9 @@ SimUseNetworkCLI -> SimUseNetworkCore -> xcrun / simctl / launchctl
 
 SimUseNetworkInstallCLI -> swift build --product sim-use-network
                         -> ~/.local/libexec payload + ~/.local/bin wrapper
+
+SimUseNetworkBuildInfoPlugin -> SimUseNetworkBuildInfoTool
+                             -> generated source in both executable targets
 ```
 
 The C shim is a resource, not a SwiftPM target. The host executable and a
@@ -46,6 +49,7 @@ one platform-specific artifact with the selected Xcode toolchain during
 | Darwin notify registration lifetime | Per-session launchd state keeper |
 | Rollback and complete removal | `NetworkSessionController` |
 | Source artifact set, staged activation, transaction cleanup, and PATH guidance | `SourceInstaller` |
+| Executable build identity | `SimUseNetworkBuildInfoTool` through `SimUseNetworkBuildInfoPlugin` |
 
 The session journal is recovery evidence, not a second network-state source of
 truth. The Darwin notification state controls the live shim behavior.
@@ -105,6 +109,19 @@ and shim generations.
 The installer recognizes only its versioned ownership marker and wrapper
 contract. It refuses to replace an unrelated or unmarked command. PATH guidance
 is output only: the installer never edits or sources shell profiles.
+
+## Build identity
+
+Both executable targets compile a generated `SimUseNetworkBuildInfo` value. The
+generator resolves `SIM_USE_NETWORK_BUILD_VERSION` and uses `dev` when the
+release identity is absent. A release producer supplies the tag-shaped version
+explicitly. The resolver removes its leading `v` for CLI display, then the
+producer verifies both executables' `--version` output; releasing never requires
+editing a Swift source constant.
+
+The release override is part of the build command arguments, so changing it
+invalidates generated output. Git state is deliberately not a version source:
+its open-ended file and ref sets cannot form reliable SwiftPM build inputs.
 
 ## Supported contract
 
