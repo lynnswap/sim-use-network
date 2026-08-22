@@ -5,7 +5,7 @@ import SimUseNetworkCore
 
 struct Doctor: NetworkExecutableCommand {
   static let configuration = CommandConfiguration(
-    abstract: "Check device identity, daemon resolution, guest tools, and runtime validation."
+    abstract: "Check device identity, runtime support, daemon resolution, and guest tools."
   )
 
   @OptionGroup var deviceOptions: DeviceOptions
@@ -18,17 +18,22 @@ struct Doctor: NetworkExecutableCommand {
   }
 
   func format(_ report: DoctorReport) -> String {
-    """
-    Device: \(report.deviceName) [\(report.deviceUDID)]
-    Runtime: \(report.platform) \(report.runtimeVersion) (\(report.runtimeBuild))
-    Architectures: \(report.supportedArchitectures.joined(separator: ", "))
-    URL loading daemon: \(report.daemonServiceTarget)
-    notifyutil: available
-    Host architecture: \(report.validationIdentity.architecture)
-    Xcode build: \(report.validationIdentity.xcodeBuild)
-    CoreSimulator build: \(report.validationIdentity.coreSimulatorBuild)
-    Shim ABI: \(report.validationIdentity.shimABIVersion)
-    E2E validation: \(report.runtimeValidated ? "passed" : "not recorded; prepare requires --experimental-runtime")
-    """
+    let support =
+      switch report.platformSupport {
+      case .supported: "supported"
+      case .experimental: "experimental; prepare requires --experimental-runtime"
+      }
+    return """
+      Device: \(report.deviceName) [\(report.deviceUDID)]
+      Runtime: \(report.platform) \(report.runtimeVersion) (\(report.runtimeBuild))
+      Architectures: \(report.supportedArchitectures.joined(separator: ", "))
+      URL loading daemon: \(report.daemonServiceTarget)
+      notifyutil: available
+      Host architecture: \(report.runtimeIdentity.architecture)
+      Xcode build: \(report.runtimeIdentity.xcodeBuild)
+      CoreSimulator build: \(report.runtimeIdentity.coreSimulatorBuild)
+      Shim ABI: \(report.runtimeIdentity.shimABIVersion)
+      Platform support: \(support)
+      """
   }
 }

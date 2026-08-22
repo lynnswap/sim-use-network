@@ -37,8 +37,8 @@ triples when those SDKs are installed.
 
 ## Runtime evidence
 
-Do not mark a runtime validated from a successful build or dylib mapping alone.
-A dedicated Simulator must demonstrate:
+Do not promote a platform from experimental support based on a successful build
+or dylib mapping alone. A dedicated Simulator must demonstrate:
 
 1. available `NWPath` and a successful HTTP request that establishes a reusable
    pooled connection;
@@ -51,9 +51,8 @@ A dedicated Simulator must demonstrate:
 6. a daemon-owned/background URLSession path fails while unavailable.
 
 Record the Xcode build, CoreSimulator build, platform, runtime version/build,
-architecture, canonical daemon domain, and shim ABI. Undocumented observations
-belong in the support matrix, not in comments presented as public Apple
-contracts.
+architecture, canonical daemon domain, and shim ABI as test evidence.
+Undocumented observations must not be presented as public Apple contracts.
 
 ## Pull requests
 

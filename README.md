@@ -128,28 +128,20 @@ Multiple booted Simulators are never resolved through `booted`; the command
 fails and asks for an exact UDID. All commands accept `--json`; both success and
 runtime failure use compact one-line envelopes compatible with `sim-use`.
 
-## Platform and runtime support
+## Platform support
 
-The source and artifact compiler are structured for iOS, watchOS, tvOS, and
-visionOS Simulators. Each platform gets a separate Mach-O because Simulator
-platform identity is encoded in `LC_BUILD_VERSION`.
+iOS and watchOS Simulators are supported. End-to-end behavior has been tested
+on iOS 26.5/27.0 and watchOS 26.5/27.0 on Apple Silicon with Xcode 26.6. Other
+Simulator runtime and Xcode versions are allowed but are not guaranteed.
 
-Runtime behavior is validated by the complete identity printed by `doctor`.
-Every field must match; sharing a marketing Xcode/runtime version is not enough.
-The identities below passed the full gate on 2026-08-21.
-The machine-readable source of truth is
-[`RuntimeCompatibility.swift`](Sources/SimUseNetworkCore/Runtime/RuntimeCompatibility.swift).
+The artifact compiler also builds tvOS and visionOS Simulator shims, but their
+runtime behavior has not been validated. Preparing either platform requires an
+explicit `--experimental-runtime` opt-in.
 
-| Platform | Runtime build | Arch | Xcode build | CoreSimulator | Daemon domain | Shim ABI | Status |
-| --- | --- | --- | --- | --- | --- | ---: | --- |
-| iOS 26.5 | 23F77 | arm64 | 17F109 | 1171.2 | user | 2 | validated |
-| iOS 27.0 | 24A5390f | arm64 | 17F109 | 1171.2 | user | 2 | validated |
-| watchOS 26.5 | 23T570 | arm64 | 17F109 | 1171.2 | system | 2 | validated |
-| watchOS 27.0 | 24R5325f | arm64 | 17F109 | 1171.2 | system | 2 | validated |
-| tvOS / visionOS | SDK 26.x | arm64 | CI/local | — | — | 2 | artifact pipeline only; runtime behavior unvalidated |
-
-`--experimental-runtime` means the caller accepts undocumented-runtime risk; it
-does not silently promote that tuple into the supported matrix.
+Each platform gets a separate Mach-O because Simulator platform identity is
+encoded in `LC_BUILD_VERSION`. `doctor` reports the exact runtime, toolchain,
+daemon domain, architecture, and shim ABI for diagnostics; those fields are not
+a static allowlist.
 
 ## Scope
 

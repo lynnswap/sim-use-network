@@ -9,6 +9,6 @@ package struct DoctorReport: Codable, Equatable {
   package let supportedArchitectures: [String]
   package let daemonServiceTarget: String
   package let notifyUtilityAvailable: Bool
-  package let validationIdentity: RuntimeValidationIdentity
-  package let runtimeValidated: Bool
+  package let runtimeIdentity: RuntimeIdentity
+  package let platformSupport: SimulatorPlatformSupport
 }

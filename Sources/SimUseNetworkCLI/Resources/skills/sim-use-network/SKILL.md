@@ -16,8 +16,8 @@ sim-use ui --device <UDID>
 ```
 
 Stop if `doctor` cannot resolve one booted Apple Simulator, its URL loading
-daemon, or `notifyutil`. An unvalidated runtime requires the user's explicit
-approval before adding `--experimental-runtime`.
+daemon, or `notifyutil`. tvOS and visionOS runtime behavior is experimental and
+requires the user's explicit approval before adding `--experimental-runtime`.
 
 Use a dedicated or disposable Simulator. The daemon-side shim affects covered
 network I/O for every app using `nsurlsessiond` in the selected Simulator, not

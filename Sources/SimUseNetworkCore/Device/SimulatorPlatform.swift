@@ -2,6 +2,15 @@
 
 import Foundation
 
+package enum SimulatorPlatformSupport: String, Codable, Equatable {
+  case supported
+  case experimental
+
+  package func permitsPreparation(experimentalOptIn: Bool) -> Bool {
+    self == .supported || experimentalOptIn
+  }
+}
+
 package enum SimulatorPlatform: String, Codable, CaseIterable {
   case iOS
   case watchOS
@@ -51,6 +60,13 @@ package enum SimulatorPlatform: String, Codable, CaseIterable {
         "user/foreground/com.apple.nsurlsessiond",
         "system/com.apple.nsurlsessiond",
       ]
+    }
+  }
+
+  package var support: SimulatorPlatformSupport {
+    switch self {
+    case .iOS, .watchOS: .supported
+    case .tvOS, .visionOS: .experimental
     }
   }
 }
