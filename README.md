@@ -43,6 +43,9 @@ Install the latest release under `~/.local`:
 curl -fsSL https://github.com/lynnswap/sim-use-network/releases/latest/download/install.sh | sh
 ```
 
+This downloads the prebuilt Apple Silicon release; it does not run a local
+Swift build.
+
 The installer publishes a command wrapper at
 `~/.local/bin/sim-use-network` and keeps the executable and both required
 resource bundles together under `~/.local/libexec/sim-use-network`.

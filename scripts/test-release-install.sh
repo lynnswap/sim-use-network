@@ -101,6 +101,14 @@ payload_count="$(
     tr -d ' '
 )"
 test "$payload_count" -eq 2
+core_resource_count="$(
+  find "$payloads_directory" \
+    -path '*/sim-use-network_SimUseNetworkCore.bundle/RuntimeArtifacts/NetworkUnavailableShim.c' \
+    -type f -print |
+    wc -l |
+    tr -d ' '
+)"
+test "$core_resource_count" -eq 2
 
 mv "$dist_root" "$temporary_directory/dist-hidden"
 mv "$release_directory" "$temporary_directory/release-hidden"
