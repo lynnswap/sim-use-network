@@ -7,7 +7,7 @@ struct SimUseNetwork: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "sim-use-network",
     abstract: "Simulate an unavailable network on an Apple Simulator.",
-    version: "0.1.0-dev",
+    version: SimUseNetworkBuildInfo.version,
     subcommands: [
       Prepare.self,
       Unavailable.self,

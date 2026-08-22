@@ -12,7 +12,7 @@ struct SimUseNetworkInstall: ParsableCommand {
       Build and run the installer from the checkout:
         swift run -c release sim-use-network-install
       """,
-    version: "0.1.0-dev"
+    version: SimUseNetworkBuildInfo.version
   )
 
   @Option(

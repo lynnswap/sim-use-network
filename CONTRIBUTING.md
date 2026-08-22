@@ -14,6 +14,11 @@ actionlint
 git diff --check
 ```
 
+Release builds set `SIM_USE_NETWORK_BUILD_VERSION` to the intended tag, such as
+`v0.1.0`. Both `sim-use-network --version` and
+`sim-use-network-install --version` must report the corresponding SemVer without
+the tag's leading `v`, such as `0.1.0`, before the artifacts are distributed.
+
 The runtime C source must compile with warnings as errors for each Simulator SDK
 present in the selected Xcode:
 
