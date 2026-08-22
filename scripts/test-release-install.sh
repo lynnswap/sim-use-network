@@ -13,8 +13,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-release_version="v0.1.0"
-expected_version="0.1.0"
+release_version="v9.8.7-test"
+expected_version="9.8.7-test"
 dist_root="$temporary_directory/dist"
 release_directory="$temporary_directory/release"
 home_directory="$temporary_directory/home"
