@@ -130,6 +130,9 @@ enum BuildInfoVersionResolver {
     ]
     process.standardOutput = output
     process.standardError = FileHandle.nullDevice
+    var environment = ProcessInfo.processInfo.environment
+    environment["GIT_OPTIONAL_LOCKS"] = "0"
+    process.environment = environment
     try process.run()
     process.waitUntilExit()
     guard process.terminationStatus == 0 else { return nil }

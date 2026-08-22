@@ -81,6 +81,58 @@ test -f "$payload_directory/.sim-use-network-install"
 test -x "$payload_directory/sim-use-network"
 test "$("$command_path" --version)" = "$expected_version"
 
+(
+  cd "$source_checkout"
+  /usr/bin/git init --quiet
+  /usr/bin/git -c user.name=sim-use-network-test \
+    -c user.email=sim-use-network-test@example.invalid \
+    add .
+  /usr/bin/git -c user.name=sim-use-network-test \
+    -c user.email=sim-use-network-test@example.invalid \
+    commit --quiet -m "Initial test checkout"
+  /usr/bin/git tag v9.8.5-test
+)
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" swift build -c release
+)
+test "$("$release_bin/sim-use-network" --version)" = "9.8.5-test"
+test "$("$release_bin/sim-use-network-install" --version)" = "9.8.5-test"
+
+(
+  cd "$source_checkout"
+  /usr/bin/git -c user.name=sim-use-network-test \
+    -c user.email=sim-use-network-test@example.invalid \
+    commit --quiet --allow-empty -m "Advance test checkout"
+)
+checkout_version="$(
+  cd "$source_checkout"
+  /usr/bin/git describe --tags --always --dirty
+)"
+checkout_version="${checkout_version#v}"
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" swift build -c release
+)
+test "$("$release_bin/sim-use-network" --version)" = "$checkout_version"
+test "$("$release_bin/sim-use-network-install" --version)" = "$checkout_version"
+
+(
+  cd "$source_checkout"
+  /usr/bin/git tag v9.8.8-test
+  PATH="$isolated_path" swift build -c release
+)
+test "$("$release_bin/sim-use-network" --version)" = "9.8.8-test"
+test "$("$release_bin/sim-use-network-install" --version)" = "9.8.8-test"
+
+printf '\n' >>"$source_checkout/CONTRIBUTING.md"
+(
+  cd "$source_checkout"
+  PATH="$isolated_path" swift build -c release
+)
+test "$("$release_bin/sim-use-network" --version)" = "9.8.8-test-dirty"
+test "$("$release_bin/sim-use-network-install" --version)" = "9.8.8-test-dirty"
+
 bundle_resource_root() {
   local bundle="$1"
   if [[ -d "$bundle/Contents/Resources" ]]; then
