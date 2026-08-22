@@ -8,8 +8,7 @@ struct SimUseNetworkBuildInfoTool {
     let options = try BuildInfoToolOptions.parse(arguments: CommandLine.arguments)
     let outputURL = URL(filePath: options.outputPath)
     let version = try BuildInfoVersionResolver.resolve(
-      environmentVersion: options.environmentVersion,
-      packageDirectory: URL(filePath: options.packageDirectoryPath, directoryHint: .isDirectory)
+      environmentVersion: options.environmentVersion
     )
     let source = BuildInfoVersionResolver.generatedSource(version: version)
 
@@ -28,12 +27,10 @@ struct SimUseNetworkBuildInfoTool {
 
 struct BuildInfoToolOptions {
   let outputPath: String
-  let packageDirectoryPath: String
   let environmentVersion: String?
 
   static func parse(arguments: [String]) throws -> Self {
     var outputPath: String?
-    var packageDirectoryPath: String?
     var environmentVersion: String?
     var index = 1
 
@@ -41,9 +38,6 @@ struct BuildInfoToolOptions {
       switch arguments[index] {
       case "--output":
         outputPath = try value(after: index, in: arguments)
-        index += 2
-      case "--package-directory":
-        packageDirectoryPath = try value(after: index, in: arguments)
         index += 2
       case "--environment-version":
         environmentVersion = try value(after: index, in: arguments)
@@ -56,12 +50,8 @@ struct BuildInfoToolOptions {
     guard let outputPath else {
       throw BuildInfoToolError.message("--output is required")
     }
-    guard let packageDirectoryPath else {
-      throw BuildInfoToolError.message("--package-directory is required")
-    }
     return Self(
       outputPath: outputPath,
-      packageDirectoryPath: packageDirectoryPath,
       environmentVersion: environmentVersion
     )
   }
@@ -75,25 +65,14 @@ struct BuildInfoToolOptions {
 }
 
 enum BuildInfoVersionResolver {
-  static func resolve(
-    environmentVersion: String?,
-    packageDirectory: URL,
-    gitDescribe: (URL) throws -> String? = defaultGitDescribe(in:)
-  ) throws -> String {
-    if let environmentVersion {
-      guard let version = normalized(environmentVersion) else {
-        throw BuildInfoToolError.message(
-          "SIM_USE_NETWORK_BUILD_VERSION must not be empty"
-        )
-      }
-      return version
+  static func resolve(environmentVersion: String?) throws -> String {
+    guard let environmentVersion else { return "dev" }
+    guard let version = normalized(environmentVersion) else {
+      throw BuildInfoToolError.message(
+        "SIM_USE_NETWORK_BUILD_VERSION must not be empty"
+      )
     }
-    if let version = try? gitDescribe(packageDirectory),
-      let normalizedVersion = normalized(version)
-    {
-      return normalizedVersion
-    }
-    return "dev"
+    return version
   }
 
   static func generatedSource(version: String) -> String {
@@ -108,36 +87,13 @@ enum BuildInfoVersionResolver {
     """
   }
 
-  private static func normalized(_ value: String?) -> String? {
-    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-      !value.isEmpty
-    else {
-      return nil
-    }
+  private static func normalized(_ value: String) -> String? {
+    let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !value.isEmpty else { return nil }
     if value.first == "v", value.dropFirst().first?.isNumber == true {
       return String(value.dropFirst())
     }
     return value
-  }
-
-  private static func defaultGitDescribe(in packageDirectory: URL) throws -> String? {
-    let process = Process()
-    let output = Pipe()
-    process.executableURL = URL(filePath: "/usr/bin/git")
-    process.arguments = [
-      "-C", packageDirectory.path,
-      "describe", "--tags", "--always",
-    ]
-    process.standardOutput = output
-    process.standardError = FileHandle.nullDevice
-    var environment = ProcessInfo.processInfo.environment
-    environment["GIT_OPTIONAL_LOCKS"] = "0"
-    process.environment = environment
-    try process.run()
-    let data = output.fileHandleForReading.readDataToEndOfFile()
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else { return nil }
-    return String(decoding: data, as: UTF8.self)
   }
 }
 

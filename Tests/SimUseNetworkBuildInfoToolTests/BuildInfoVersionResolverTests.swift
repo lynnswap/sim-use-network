@@ -1,69 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import Foundation
 import Testing
 
 @testable import SimUseNetworkBuildInfoTool
 
 @Suite
 struct BuildInfoVersionResolverTests {
-  private let packageDirectory = URL(filePath: "/package", directoryHint: .isDirectory)
-
   @Test
-  func environmentVersionOverridesGitDescribe() throws {
-    var queriedGit = false
-
+  func explicitVersionIsNormalized() throws {
     let version = try BuildInfoVersionResolver.resolve(
-      environmentVersion: "  v0.1.0  ",
-      packageDirectory: packageDirectory,
-      gitDescribe: { _ in
-        queriedGit = true
-        return "ignored"
-      }
+      environmentVersion: "  v0.1.0  "
     )
 
     #expect(version == "0.1.0")
-    #expect(!queriedGit)
-  }
-
-  @Test
-  func gitDescribeOwnsSourceCheckoutVersion() throws {
-    let version = try BuildInfoVersionResolver.resolve(
-      environmentVersion: nil,
-      packageDirectory: packageDirectory,
-      gitDescribe: { directory in
-        #expect(directory == packageDirectory)
-        return "v0.1.0-3-gabc123\n"
-      }
-    )
-
-    #expect(version == "0.1.0-3-gabc123")
   }
 
   @Test
   func missingBuildIdentityUsesDevelopmentFallback() throws {
-    let missingVersion = try BuildInfoVersionResolver.resolve(
-      environmentVersion: nil,
-      packageDirectory: packageDirectory,
-      gitDescribe: { _ in nil }
-    )
-    let failedGit = try BuildInfoVersionResolver.resolve(
-      environmentVersion: nil,
-      packageDirectory: packageDirectory,
-      gitDescribe: { _ in throw CocoaError(.fileNoSuchFile) }
-    )
+    let version = try BuildInfoVersionResolver.resolve(environmentVersion: nil)
 
-    #expect(missingVersion == "dev")
-    #expect(failedGit == "dev")
+    #expect(version == "dev")
   }
 
   @Test
   func explicitEmptyEnvironmentVersionFails() {
     #expect(throws: BuildInfoToolError.self) {
       try BuildInfoVersionResolver.resolve(
-        environmentVersion: " \n ",
-        packageDirectory: packageDirectory,
-        gitDescribe: { _ in "must-not-be-used" }
+        environmentVersion: " \n "
       )
     }
   }
