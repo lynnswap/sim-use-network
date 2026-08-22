@@ -33,11 +33,11 @@ struct BuildInfoVersionResolverTests {
       packageDirectory: packageDirectory,
       gitDescribe: { directory in
         #expect(directory == packageDirectory)
-        return "v0.1.0-3-gabc123-dirty\n"
+        return "v0.1.0-3-gabc123\n"
       }
     )
 
-    #expect(version == "0.1.0-3-gabc123-dirty")
+    #expect(version == "0.1.0-3-gabc123")
   }
 
   @Test

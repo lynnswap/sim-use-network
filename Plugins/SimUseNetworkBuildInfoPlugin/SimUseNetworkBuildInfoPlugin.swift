@@ -39,44 +39,31 @@ struct SimUseNetworkBuildInfoPlugin: BuildToolPlugin {
 
   private static func gitInputFiles(in packageDirectory: URL) -> [URL] {
     guard
-      let trackedOutput = gitOutput(
-        arguments: ["ls-files", "-z"],
+      let gitDirectory = gitOutput(
+        arguments: ["rev-parse", "--absolute-git-dir"],
         in: packageDirectory
-      )
+      ).flatMap(absoluteURL)
     else {
       return []
     }
-
-    var inputs = trackedOutput.split(separator: "\0").map {
-      packageDirectory.appending(path: String($0))
-    }
-    let gitDirectory = gitOutput(
-      arguments: ["rev-parse", "--absolute-git-dir"],
-      in: packageDirectory
-    ).flatMap(absoluteURL)
     let commonDirectory = gitOutput(
       arguments: ["rev-parse", "--path-format=absolute", "--git-common-dir"],
       in: packageDirectory
     ).flatMap(absoluteURL)
 
-    if let gitDirectory {
-      inputs.append(gitDirectory)
-      inputs.append(gitDirectory.appending(path: "HEAD"))
-      inputs.append(gitDirectory.appending(path: "index"))
+    var inputs = [
+      gitDirectory,
+      gitDirectory.appending(path: "HEAD"),
+    ]
+    let headLog = gitDirectory.appending(path: "logs/HEAD")
+    if FileManager.default.fileExists(atPath: headLog.path) {
+      inputs.append(headLog)
     }
     if let commonDirectory {
       inputs.append(commonDirectory)
-      inputs.append(
-        contentsOf: directoryTree(
-          at: commonDirectory.appending(
-            path: "refs",
-            directoryHint: .isDirectory
-          )
-        )
-      )
-      let packedReferences = commonDirectory.appending(path: "packed-refs")
-      if FileManager.default.fileExists(atPath: packedReferences.path) {
-        inputs.append(packedReferences)
+      let tags = commonDirectory.appending(path: "refs/tags", directoryHint: .isDirectory)
+      if FileManager.default.fileExists(atPath: tags.path) {
+        inputs.append(tags)
       }
     }
     let worktreePointer = packageDirectory.appending(path: ".git")
@@ -114,22 +101,5 @@ struct SimUseNetworkBuildInfoPlugin: BuildToolPlugin {
     let path = output.trimmingCharacters(in: .whitespacesAndNewlines)
     guard path.hasPrefix("/") else { return nil }
     return URL(filePath: path, directoryHint: .isDirectory)
-  }
-
-  private static func directoryTree(at root: URL) -> [URL] {
-    guard FileManager.default.fileExists(atPath: root.path) else { return [] }
-    var inputs = [root]
-    guard
-      let enumerator = FileManager.default.enumerator(
-        at: root,
-        includingPropertiesForKeys: nil
-      )
-    else {
-      return inputs
-    }
-    for case let input as URL in enumerator {
-      inputs.append(input)
-    }
-    return inputs
   }
 }

@@ -107,7 +107,7 @@ test "$("$release_bin/sim-use-network-install" --version)" = "9.8.5-test"
 )
 checkout_version="$(
   cd "$source_checkout"
-  /usr/bin/git describe --tags --always --dirty
+  /usr/bin/git describe --tags --always
 )"
 checkout_version="${checkout_version#v}"
 (
@@ -125,13 +125,13 @@ test "$("$release_bin/sim-use-network-install" --version)" = "$checkout_version"
 test "$("$release_bin/sim-use-network" --version)" = "9.8.8-test"
 test "$("$release_bin/sim-use-network-install" --version)" = "9.8.8-test"
 
-printf '\n' >>"$source_checkout/CONTRIBUTING.md"
+mv "$source_checkout/README.md" "$source_checkout/README-renamed.md"
 (
   cd "$source_checkout"
   PATH="$isolated_path" swift build -c release
 )
-test "$("$release_bin/sim-use-network" --version)" = "9.8.8-test-dirty"
-test "$("$release_bin/sim-use-network-install" --version)" = "9.8.8-test-dirty"
+test "$("$release_bin/sim-use-network" --version)" = "9.8.8-test"
+test "$("$release_bin/sim-use-network-install" --version)" = "9.8.8-test"
 
 bundle_resource_root() {
   local bundle="$1"

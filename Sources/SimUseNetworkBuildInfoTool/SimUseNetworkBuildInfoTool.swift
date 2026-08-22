@@ -126,7 +126,7 @@ enum BuildInfoVersionResolver {
     process.executableURL = URL(filePath: "/usr/bin/git")
     process.arguments = [
       "-C", packageDirectory.path,
-      "describe", "--tags", "--always", "--dirty",
+      "describe", "--tags", "--always",
     ]
     process.standardOutput = output
     process.standardError = FileHandle.nullDevice

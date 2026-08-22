@@ -114,17 +114,18 @@ is output only: the installer never edits or sources shell profiles.
 
 Both executable targets compile a generated `SimUseNetworkBuildInfo` value. The
 generator resolves `SIM_USE_NETWORK_BUILD_VERSION`, then the current
-`git describe --tags --always --dirty` value, and finally `dev` when neither
-source is available. A release producer supplies the tag-shaped version
-explicitly. The resolver removes its leading `v` for CLI display, then the
-producer verifies both executables' `--version` output; releasing never requires
-editing a Swift source constant.
+`git describe --tags --always` value, and finally `dev` when neither source is
+available. A release producer supplies the tag-shaped version explicitly. The
+resolver removes its leading `v` for CLI display, then the producer verifies
+both executables' `--version` output; releasing never requires editing a Swift
+source constant.
 
 The release override participates in build invalidation as a command argument.
-Without that override, the build-tool plugin makes tracked package files and
-relevant Git refs explicit build inputs, so changing the checkout commit, tag,
-or dirty state also invalidates generated output. `git describe` is a checkout
-convenience, not the source of truth for release artifacts.
+Without that override, the build-tool plugin makes stable HEAD and tag metadata
+explicit build inputs, so changing the checkout commit or tag also invalidates
+generated output. Working-tree state is deliberately excluded because deleted
+tracked paths cannot remain valid SwiftPM build inputs. `git describe` is a
+checkout convenience, not the source of truth for release artifacts.
 
 ## Supported contract
 
