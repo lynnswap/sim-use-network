@@ -242,6 +242,11 @@ jobs:
             esac
           }
 
+          release_kind_argument="--prerelease=false"
+          if [[ "${RELEASE_VERSION}" == *-* ]]; then
+            release_kind_argument="--prerelease"
+          fi
+
           if release_json="$(gh release view "${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" --json isDraft 2>/dev/null)"; then
             if [[ "$(jq -r '.isDraft' <<< "${release_json}")" != "true" ]]; then
               echo "GitHub Release already exists and is not a draft: ${RELEASE_VERSION}" >&2
@@ -251,6 +256,7 @@ jobs:
             gh release edit "${RELEASE_VERSION}" \
               --repo "${GITHUB_REPOSITORY}" \
               --draft \
+              "${release_kind_argument}" \
               --target "${GITHUB_SHA}"
 
             while IFS= read -r asset_name; do
@@ -282,6 +288,7 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --draft \
               --generate-notes \
+              "${release_kind_argument}" \
               --target "${GITHUB_SHA}" \
               --title "${RELEASE_VERSION}"
             echo "Created draft release ${RELEASE_VERSION}."
