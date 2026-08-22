@@ -61,6 +61,13 @@ package struct NetworkSessionController {
     let lock = try store.acquireLock(deviceUDID: device.udid)
     defer { withExtendedLifetime(lock) {} }
     let controller = inheritingLease(from: lock)
+    let platformSupport = device.runtime.platform.support
+    guard platformSupport.permitsPreparation(experimentalOptIn: experimentalRuntime) else {
+      throw SimUseNetworkError.invalidInput(
+        "\(device.runtime.platform.displayName) runtime behavior is experimental. "
+          + "Pass --experimental-runtime to opt in."
+      )
+    }
 
     guard try controller.store.load(deviceUDID: device.udid) == nil else {
       throw SimUseNetworkError.sessionAlreadyExists(device.udid)
@@ -73,17 +80,6 @@ package struct NetworkSessionController {
       deviceUDID: device.udid,
       platform: device.runtime.platform
     )
-    guard
-      try controller.compatibility.isValidated(
-        runtime: device.runtime,
-        daemonServiceTarget: serviceTarget
-      ) || experimentalRuntime
-    else {
-      throw SimUseNetworkError.invalidInput(
-        "This runtime/toolchain identity has not passed the sim-use-network end-to-end gate. "
-          + "Run doctor for the exact identity, or pass --experimental-runtime to opt in."
-      )
-    }
     let notifyDaemonIdentity = try controller.simulator.notifyDaemonIdentity(
       deviceUDID: device.udid
     )
@@ -508,7 +504,7 @@ package struct NetworkSessionController {
       platform: device.runtime.platform
     )
     try simulator.verifyNotifyUtility(deviceUDID: device.udid)
-    let validationIdentity = try compatibility.identity(
+    let runtimeIdentity = try compatibility.identity(
       runtime: device.runtime,
       daemonServiceTarget: serviceTarget
     )
@@ -521,11 +517,8 @@ package struct NetworkSessionController {
       supportedArchitectures: device.runtime.supportedArchitectures,
       daemonServiceTarget: serviceTarget,
       notifyUtilityAvailable: true,
-      validationIdentity: validationIdentity,
-      runtimeValidated: try compatibility.isValidated(
-        runtime: device.runtime,
-        daemonServiceTarget: serviceTarget
-      )
+      runtimeIdentity: runtimeIdentity,
+      platformSupport: device.runtime.platform.support
     )
   }
 

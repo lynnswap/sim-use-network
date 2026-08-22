@@ -38,6 +38,7 @@ one platform-specific artifact with the selected Xcode toolchain during
 | Invariant | Owner |
 | --- | --- |
 | Exact booted device and runtime identity | `SimulatorDeviceResolver` |
+| Platform-level runtime support | `SimulatorPlatform.support` |
 | One active mutation at a time per UDID | `DeviceLock`, inherited by every mutation child |
 | Session phase and recovery evidence | `SessionStore` |
 | Platform-specific artifact | `RuntimeArtifactCompiler` |
@@ -143,13 +144,15 @@ a dedicated Simulator is recommended.
 
 ## Compatibility
 
-Simulator runtime implementation is undocumented. Platform/runtime build,
+Simulator runtime implementation is undocumented. iOS and watchOS are supported
+platforms; tvOS and visionOS require an explicit experimental opt-in until their
+runtime behavior passes the end-to-end gate. The exact platform/runtime build,
 architecture, Xcode build, CoreSimulator build, canonical daemon domain, and
-shim ABI form one validation identity. The CLI also records launchd PID and run
-generation for `notifyd` and `nsurlsessiond`.
+shim ABI are diagnostic identity rather than an execution allowlist. The CLI
+also records launchd PID and run generation for `notifyd` and `nsurlsessiond`.
 
 The artifact gate requires an exact architecture slice, dylib Mach-O type,
 minimum OS/platform, install name and dependency set, code signature,
 version-specific ABI export, and exact `__interpose` fixups. A successful clang
-exit or process mapping alone is not preparation proof. Tested identities are
-documented separately from the mechanism's general architecture.
+exit or process mapping alone is not preparation proof. End-to-end test records
+remain evidence for compatibility claims without blocking later runtime builds.

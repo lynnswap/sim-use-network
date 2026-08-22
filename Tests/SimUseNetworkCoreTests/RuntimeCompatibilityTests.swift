@@ -18,7 +18,7 @@ struct RuntimeCompatibilityTests {
     )
     #expect(
       identity
-        == RuntimeValidationIdentity(
+        == RuntimeIdentity(
           platform: "watchOS",
           runtimeVersion: "27.0",
           runtimeBuild: "24R5325f",
@@ -28,23 +28,19 @@ struct RuntimeCompatibilityTests {
           daemonDomain: "system",
           shimABIVersion: 2
         ))
-    #expect(
-      try compatibility.isValidated(
-        runtime: runtime,
-        daemonServiceTarget: "system/com.apple.nsurlsessiond"
-      ))
   }
 
   @Test
-  func unmeasuredArchitectureIsNotValidated() throws {
+  func identityRecordsTheCurrentArchitectureForDiagnostics() throws {
     let compatibility = makeCompatibility(architecture: "x86_64")
     let runtime = makeRuntime()
 
-    #expect(
-      try !compatibility.isValidated(
-        runtime: runtime,
-        daemonServiceTarget: "system/com.apple.nsurlsessiond"
-      ))
+    let identity = try compatibility.identity(
+      runtime: runtime,
+      daemonServiceTarget: "system/com.apple.nsurlsessiond"
+    )
+
+    #expect(identity.architecture == "x86_64")
   }
 
   private func makeCompatibility(architecture: String) -> RuntimeCompatibility {

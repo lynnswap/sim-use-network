@@ -2,7 +2,7 @@
 
 import Foundation
 
-package struct RuntimeValidationIdentity: Codable, Equatable {
+package struct RuntimeIdentity: Codable, Equatable {
   package let platform: String
   package let runtimeVersion: String
   package let runtimeBuild: String
@@ -11,33 +11,10 @@ package struct RuntimeValidationIdentity: Codable, Equatable {
   package let coreSimulatorBuild: String
   package let daemonDomain: String
   package let shimABIVersion: UInt32
-
-  fileprivate var key: String {
-    [
-      platform,
-      runtimeVersion,
-      runtimeBuild,
-      architecture,
-      xcodeBuild,
-      coreSimulatorBuild,
-      daemonDomain,
-      String(shimABIVersion),
-    ].joined(separator: "|")
-  }
 }
 
 package struct RuntimeCompatibility {
   package static let shimABIVersion: UInt32 = 2
-
-  // A tuple enters this list only after path state, a request over an HTTP
-  // connection pooled before the state change, restoration, and complete
-  // shim removal pass with this exact toolchain/Simulator identity.
-  private static let validatedRuntimeKeys: Set<String> = [
-    "iOS|26.5|23F77|arm64|17F109|1171.2|user|2",
-    "iOS|27.0|24A5390f|arm64|17F109|1171.2|user|2",
-    "watchOS|26.5|23T570|arm64|17F109|1171.2|system|2",
-    "watchOS|27.0|24R5325f|arm64|17F109|1171.2|system|2",
-  ]
 
   private let processes: ProcessClient
 
@@ -52,7 +29,7 @@ package struct RuntimeCompatibility {
   package func identity(
     runtime: SimulatorRuntime,
     daemonServiceTarget: String
-  ) throws -> RuntimeValidationIdentity {
+  ) throws -> RuntimeIdentity {
     let architecture = try processes.checked(
       URL(filePath: "/usr/bin/uname"),
       ["-m"]
@@ -99,7 +76,7 @@ package struct RuntimeCompatibility {
         "Unsupported nsurlsessiond launchd domain: \(daemonServiceTarget)."
       )
     }
-    return RuntimeValidationIdentity(
+    return RuntimeIdentity(
       platform: runtime.platform.displayName,
       runtimeVersion: runtime.version,
       runtimeBuild: runtime.buildVersion,
@@ -108,15 +85,6 @@ package struct RuntimeCompatibility {
       coreSimulatorBuild: coreSimulatorBuild,
       daemonDomain: String(daemonDomain),
       shimABIVersion: Self.shimABIVersion
-    )
-  }
-
-  package func isValidated(
-    runtime: SimulatorRuntime,
-    daemonServiceTarget: String
-  ) throws -> Bool {
-    Self.validatedRuntimeKeys.contains(
-      try identity(runtime: runtime, daemonServiceTarget: daemonServiceTarget).key
     )
   }
 }

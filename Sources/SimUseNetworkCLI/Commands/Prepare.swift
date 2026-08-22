@@ -16,7 +16,7 @@ struct Prepare: NetworkExecutableCommand {
 
   @Flag(
     name: .long,
-    help: "Allow a runtime build that has not passed the repository end-to-end gate."
+    help: "Allow a platform whose runtime behavior remains experimental."
   )
   var experimentalRuntime = false
 
