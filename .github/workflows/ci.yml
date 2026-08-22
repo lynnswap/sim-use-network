@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -28,6 +29,9 @@ jobs:
 
       - name: Run source installer distribution test
         run: ./scripts/test-source-install.sh
+
+      - name: Run release installer distribution test
+        run: ./scripts/test-release-install.sh
 
       - name: Run runtime shim unit tests
         run: ./scripts/test-runtime-shim.sh

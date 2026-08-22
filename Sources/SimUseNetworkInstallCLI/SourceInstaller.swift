@@ -103,7 +103,44 @@ package struct SourceInstaller {
         "SwiftPM did not produce the release build directory at \(sourceDirectory.path)."
       )
     }
-    try validateArtifacts(in: sourceDirectory)
+    return try publish(
+      artifactsDirectory: sourceDirectory,
+      layout: layout,
+      environment: environment
+    )
+  }
+
+  package func installPrebuilt(
+    artifactsDirectory: URL,
+    prefix: String?,
+    environment: [String: String],
+    currentDirectory: URL
+  ) throws -> [String] {
+    let sourceDirectory = artifactsDirectory.resolvingSymlinksInPath().standardizedFileURL
+    guard try itemKind(at: sourceDirectory) == .directory else {
+      throw SourceInstallError.message(
+        "Could not find the prebuilt artifact directory at \(sourceDirectory.path)."
+      )
+    }
+    let layout = try Self.layout(
+      prefix: prefix,
+      environment: environment,
+      currentDirectory: currentDirectory
+    )
+    try validateExistingDestination(layout)
+    return try publish(
+      artifactsDirectory: sourceDirectory,
+      layout: layout,
+      environment: environment
+    )
+  }
+
+  private func publish(
+    artifactsDirectory: URL,
+    layout: Layout,
+    environment: [String: String]
+  ) throws -> [String] {
+    try validateArtifacts(in: artifactsDirectory)
     try prepareInstallDirectories(layout)
     let installLock = try SourceInstallLock(
       url: layout.installRoot.appendingPathComponent("install.lock", isDirectory: false)
@@ -144,7 +181,7 @@ package struct SourceInstaller {
     var finalPayloadPublished = false
 
     do {
-      try copyArtifacts(from: sourceDirectory, to: stagingPayload)
+      try copyArtifacts(from: artifactsDirectory, to: stagingPayload)
       try Data(Self.ownershipMarkerContents.utf8).write(
         to: stagingPayload.appendingPathComponent(Self.ownershipMarkerName)
       )

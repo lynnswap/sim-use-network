@@ -1,0 +1,215 @@
+#!/usr/bin/env sh
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu
+
+VERSION="__VERSION__"
+REPO="__REPO__"
+DEFAULT_BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
+BASE_URL="${SIM_USE_NETWORK_BASE_URL:-$DEFAULT_BASE_URL}"
+install_prefix="${SIM_USE_NETWORK_INSTALL_PREFIX:-}"
+ARCHIVE="sim-use-network-darwin-arm64.tar.gz"
+CHECKSUMS="SHA256SUMS.txt"
+
+usage() {
+  cat <<'EOF'
+Usage: install.sh [--prefix <dir>]
+EOF
+}
+
+need_value() {
+  if [ -z "${2:-}" ]; then
+    echo "$1 requires a value." >&2
+    usage >&2
+    exit 1
+  fi
+}
+
+need() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing required command: $1" >&2
+    exit 1
+  fi
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --prefix)
+      need_value "$1" "${2:-}"
+      install_prefix="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$install_prefix" ]; then
+  if [ -z "${HOME:-}" ]; then
+    echo "HOME is not set; pass an install location with --prefix." >&2
+    exit 1
+  fi
+  install_prefix="${HOME}/.local"
+fi
+
+need awk
+need basename
+need cat
+need cmp
+need curl
+need find
+need mkdir
+need mktemp
+need rm
+need shasum
+need sort
+need tar
+need uname
+
+host_os="$(uname -s)"
+host_arch="$(uname -m)"
+arm64_capable=0
+if [ "$host_os" = "Darwin" ] && [ "$host_arch" = "arm64" ]; then
+  arm64_capable=1
+elif [ "$host_os" = "Darwin" ] && [ "$host_arch" = "x86_64" ] \
+  && [ -x /usr/sbin/sysctl ] \
+  && [ "$(/usr/sbin/sysctl -in hw.optional.arm64 2>/dev/null || echo 0)" = "1" ]
+then
+  arm64_capable=1
+fi
+if [ "$arm64_capable" != "1" ]; then
+  echo "GitHub release archives require an Apple Silicon Mac, not ${host_os}/${host_arch}." >&2
+  echo "sim-use-network supports Apple Silicon Macs only." >&2
+  exit 1
+fi
+
+tmp_root="${TMPDIR:-/tmp}"
+tmp_dir="$(mktemp -d "${tmp_root%/}/sim-use-network.XXXXXX")"
+cleanup() {
+  rm -rf "$tmp_dir"
+}
+trap cleanup 0
+trap 'exit 1' 1 2 15
+
+archive_path="$tmp_dir/$ARCHIVE"
+checksums_path="$tmp_dir/$CHECKSUMS"
+curl -fsSL -o "$archive_path" "${BASE_URL%/}/$ARCHIVE"
+curl -fsSL -o "$checksums_path" "${BASE_URL%/}/$CHECKSUMS"
+
+selected_checksum="$tmp_dir/SHA256SUMS.selected"
+if ! awk -v asset="$ARCHIVE" '
+  NF == 2 && $2 == asset && length($1) == 64 && $1 !~ /[^0-9A-Fa-f]/ {
+    print $1 "  " $2
+    matches += 1
+  }
+  END { if (matches != 1) exit 1 }
+' "$checksums_path" > "$selected_checksum"
+then
+  echo "$CHECKSUMS must contain exactly one valid checksum for $ARCHIVE." >&2
+  exit 1
+fi
+(
+  cd "$tmp_dir"
+  shasum -a 256 -c "$(basename "$selected_checksum")"
+)
+
+expected_entries="$tmp_dir/archive.expected"
+cat <<'EOF' | LC_ALL=C sort > "$expected_entries"
+installer/
+installer/sim-use-network-install
+payload/
+payload/sim-use-network
+payload/sim-use-network_SimUseNetworkCLI.bundle/
+payload/sim-use-network_SimUseNetworkCLI.bundle/skills/
+payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/
+payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/.sim-use-network-skill
+payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/SKILL.md
+payload/sim-use-network_SimUseNetworkCore.bundle/
+payload/sim-use-network_SimUseNetworkCore.bundle/RuntimeArtifacts/
+payload/sim-use-network_SimUseNetworkCore.bundle/RuntimeArtifacts/NetworkUnavailableShim.c
+EOF
+
+archive_entries="$tmp_dir/archive.entries"
+if ! tar -tzf "$archive_path" > "$tmp_dir/archive.entries.unsorted"; then
+  echo "Could not read release archive entries." >&2
+  exit 1
+fi
+LC_ALL=C sort "$tmp_dir/archive.entries.unsorted" > "$archive_entries"
+if ! cmp -s "$expected_entries" "$archive_entries"; then
+  echo "Release archive entries are not expected." >&2
+  exit 1
+fi
+
+expected_types="$tmp_dir/archive-types.expected"
+cat <<'EOF' | LC_ALL=C sort > "$expected_types"
+d installer/
+- installer/sim-use-network-install
+d payload/
+- payload/sim-use-network
+d payload/sim-use-network_SimUseNetworkCLI.bundle/
+d payload/sim-use-network_SimUseNetworkCLI.bundle/skills/
+d payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/
+- payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/.sim-use-network-skill
+- payload/sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/SKILL.md
+d payload/sim-use-network_SimUseNetworkCore.bundle/
+d payload/sim-use-network_SimUseNetworkCore.bundle/RuntimeArtifacts/
+- payload/sim-use-network_SimUseNetworkCore.bundle/RuntimeArtifacts/NetworkUnavailableShim.c
+EOF
+
+if ! tar -tvzf "$archive_path" > "$tmp_dir/archive.verbose"; then
+  echo "Could not read release archive metadata." >&2
+  exit 1
+fi
+if ! awk '
+  {
+    kind = substr($1, 1, 1)
+    if (kind != "d" && kind != "-") exit 1
+    print kind " " $NF
+  }
+' "$tmp_dir/archive.verbose" > "$tmp_dir/archive-types.unsorted"
+then
+  echo "Release archive contains a link or another unsupported entry type." >&2
+  exit 1
+fi
+LC_ALL=C sort "$tmp_dir/archive-types.unsorted" > "$tmp_dir/archive-types.actual"
+if ! cmp -s "$expected_types" "$tmp_dir/archive-types.actual"; then
+  echo "Release archive entry types are not expected." >&2
+  exit 1
+fi
+
+extraction_directory="$tmp_dir/extracted"
+mkdir "$extraction_directory"
+tar -xzf "$archive_path" -C "$extraction_directory"
+
+installer="$extraction_directory/installer/sim-use-network-install"
+payload="$extraction_directory/payload"
+network_binary="$payload/sim-use-network"
+if [ ! -x "$installer" ] || [ ! -x "$network_binary" ]; then
+  echo "Release archive executables are not executable." >&2
+  exit 1
+fi
+if [ -n "$(find "$extraction_directory" -type l -print -quit)" ]; then
+  echo "Extracted release payload must not contain symbolic links." >&2
+  exit 1
+fi
+
+expected_version="${VERSION#v}"
+installer_version="$("$installer" --version)"
+network_version="$("$network_binary" --version)"
+if [ "$installer_version" != "$expected_version" ]; then
+  echo "Installer version mismatch: expected $expected_version, got $installer_version" >&2
+  exit 1
+fi
+if [ "$network_version" != "$expected_version" ]; then
+  echo "sim-use-network version mismatch: expected $expected_version, got $network_version" >&2
+  exit 1
+fi
+
+"$installer" --prebuilt-artifacts "$payload" --prefix "$install_prefix"
