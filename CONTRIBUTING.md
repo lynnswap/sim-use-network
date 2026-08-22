@@ -9,6 +9,7 @@ cleanup verification.
 swift build
 swift test
 ./scripts/test-source-install.sh
+./scripts/test-release-install.sh
 ./scripts/test-runtime-shim.sh
 actionlint
 git diff --check
@@ -18,6 +19,20 @@ Release builds set `SIM_USE_NETWORK_BUILD_VERSION` to the intended tag, such as
 `v0.1.0`. Both `sim-use-network --version` and
 `sim-use-network-install --version` must report the corresponding SemVer without
 the tag's leading `v`, such as `0.1.0`, before the artifacts are distributed.
+
+## Release process
+
+Run the `Release` workflow from the current `main` commit with the intended tag,
+such as `v0.1.0`. It reruns CI, builds and verifies the Apple Silicon archive,
+and creates or repairs a draft GitHub release with exactly these assets:
+
+- `install.sh`
+- `SHA256SUMS.txt`
+- `sim-use-network-darwin-arm64.tar.gz`
+
+Review the target commit, release notes, and assets before publishing the draft.
+Do not create or push the tag manually; publishing the draft is the release
+boundary.
 
 The runtime C source must compile with warnings as errors for each Simulator SDK
 present in the selected Xcode:

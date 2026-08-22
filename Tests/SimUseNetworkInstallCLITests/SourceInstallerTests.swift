@@ -63,6 +63,40 @@ struct SourceInstallerTests {
   }
 
   @Test
+  func prebuiltInstallPublishesArtifactsWithoutRunningSwiftBuild() throws {
+    let fixture = try makeCheckoutFixture()
+    defer { withExtendedLifetime(fixture) {} }
+    let prefix = fixture.root.appendingPathComponent("prebuilt install", isDirectory: true)
+    let artifactsDirectory = fixture.root.appendingPathComponent(
+      ".build/arm64-apple-macosx/release",
+      isDirectory: true
+    )
+    let installer = SourceInstaller(
+      process: InstallProcess { executable, _, _, _ in
+        executable.path == "/usr/bin/env" ? 99 : 0
+      },
+      makeIdentifier: { "prebuilt" }
+    )
+
+    _ = try installer.installPrebuilt(
+      artifactsDirectory: artifactsDirectory,
+      prefix: prefix.path,
+      environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"],
+      currentDirectory: fixture.root
+    )
+
+    let installedExecutable = prefix.appendingPathComponent(
+      "libexec/sim-use-network/payloads/prebuilt/sim-use-network"
+    )
+    #expect(FileManager.default.isExecutableFile(atPath: installedExecutable.path))
+    #expect(
+      FileManager.default.isExecutableFile(
+        atPath: prefix.appendingPathComponent(
+          "bin/sim-use-network"
+        ).path))
+  }
+
+  @Test
   func failedPrepublicationSmokeTestLeavesThePreviousInstallUntouched() throws {
     let fixture = try makeCheckoutFixture()
     defer { withExtendedLifetime(fixture) {} }

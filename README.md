@@ -22,19 +22,55 @@ state.
 
 ## Requirements
 
-- macOS 26.2 or later for the current source-only distribution
-- Xcode 26.4 or later with Swift 6.3 and the selected Simulator SDK
+- an Apple Silicon Mac
+- macOS 26.2 or later
+- Xcode 26.4 or later with the selected Simulator SDK
 - a booted Apple Simulator and an app already installed on it
-- a runtime architecture supported by the host Mac
 
 See Apple's [Xcode system requirements](https://developer.apple.com/xcode/system-requirements/)
 for the host OS required by a particular Xcode release.
 
 No `sudo`, Packet Filter rule, host route change, proxy, or DNS mutation is
-used. The executable's deployment target is macOS 15.4, but no prebuilt binary
-is currently distributed; building it requires the newer host/toolchain above.
+used. Although the prebuilt executable's deployment target is macOS 15.4,
+`prepare` still needs the newer Xcode toolchain above to compile its bundled C
+shim for the selected Simulator runtime.
 
-## Install from source
+## Install
+
+Install the latest release under `~/.local`:
+
+```bash
+curl -fsSL https://github.com/lynnswap/sim-use-network/releases/latest/download/install.sh | sh
+```
+
+The installer publishes a command wrapper at
+`~/.local/bin/sim-use-network` and keeps the executable and both required
+resource bundles together under `~/.local/libexec/sim-use-network`.
+Each wrapper targets one immutable payload. Older payloads are retained so a
+command that was already running can continue to resolve its matching resources.
+
+If the command directory is missing from `PATH` or another command shadows the
+new install, the installer prints shell-safe commands for the current session
+and, when it can identify a writable zsh or bash login profile, for future
+sessions. It never edits or sources a shell profile itself.
+
+<details>
+<summary>Other install options</summary>
+
+### Custom prefix
+
+```bash
+curl -fsSL https://github.com/lynnswap/sim-use-network/releases/latest/download/install.sh \
+  | sh -s -- --prefix /path/to/prefix
+```
+
+### Specific version
+
+```bash
+curl -fsSL https://github.com/lynnswap/sim-use-network/releases/download/v0.1.0/install.sh | sh
+```
+
+### Build from source
 
 From a `sim-use-network` checkout, build and install the command in one step:
 
@@ -44,11 +80,8 @@ cd sim-use-network
 swift run -c release sim-use-network-install
 ```
 
-The default prefix is `~/.local`. The installer publishes a command wrapper at
-`~/.local/bin/sim-use-network` and keeps the executable and both required
-resource bundles together under `~/.local/libexec/sim-use-network`.
-Each wrapper targets one immutable payload. Older payloads are retained so a
-command that was already running can continue to resolve its matching resources.
+Source builds require Swift 6.3. The default prefix and installed layout are the
+same as for the release installer.
 
 Use another prefix when needed:
 
@@ -56,10 +89,7 @@ Use another prefix when needed:
 swift run -c release sim-use-network-install --prefix /path/to/prefix
 ```
 
-If the command directory is missing from `PATH` or another command shadows the
-new install, the installer prints shell-safe commands for the current session
-and, when it can identify a writable zsh or bash login profile, for future
-sessions. It never edits or sources a shell profile itself.
+</details>
 
 ## Quick start
 
