@@ -101,15 +101,13 @@ struct SimUseNetworkBuildInfoPlugin: BuildToolPlugin {
 
     do {
       try process.run()
+      let data = output.fileHandleForReading.readDataToEndOfFile()
+      process.waitUntilExit()
+      guard process.terminationStatus == 0 else { return nil }
+      return String(decoding: data, as: UTF8.self)
     } catch {
       return nil
     }
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else { return nil }
-    return String(
-      decoding: output.fileHandleForReading.readDataToEndOfFile(),
-      as: UTF8.self
-    )
   }
 
   private static func absoluteURL(_ output: String) -> URL? {

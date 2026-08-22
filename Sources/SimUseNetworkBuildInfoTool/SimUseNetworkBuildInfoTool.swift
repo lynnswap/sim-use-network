@@ -134,12 +134,10 @@ enum BuildInfoVersionResolver {
     environment["GIT_OPTIONAL_LOCKS"] = "0"
     process.environment = environment
     try process.run()
+    let data = output.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
     guard process.terminationStatus == 0 else { return nil }
-    return String(
-      decoding: output.fileHandleForReading.readDataToEndOfFile(),
-      as: UTF8.self
-    )
+    return String(decoding: data, as: UTF8.self)
   }
 }
 
