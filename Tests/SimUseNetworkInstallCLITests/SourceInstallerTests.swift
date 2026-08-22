@@ -97,6 +97,36 @@ struct SourceInstallerTests {
   }
 
   @Test
+  func incompletePrebuiltArtifactsDoNotCreateTheInstallPrefix() throws {
+    let fixture = try makeCheckoutFixture()
+    defer { withExtendedLifetime(fixture) {} }
+    let prefix = fixture.root.appendingPathComponent("incomplete prebuilt", isDirectory: true)
+    let artifactsDirectory = fixture.root.appendingPathComponent(
+      ".build/arm64-apple-macosx/release",
+      isDirectory: true
+    )
+    try FileManager.default.removeItem(
+      at: artifactsDirectory.appendingPathComponent(
+        "sim-use-network_SimUseNetworkCLI.bundle/skills/sim-use-network/SKILL.md"
+      )
+    )
+
+    #expect(throws: (any Error).self) {
+      _ = try SourceInstaller(
+        process: InstallProcess { _, _, _, _ in 0 },
+        makeIdentifier: { "unused" }
+      ).installPrebuilt(
+        artifactsDirectory: artifactsDirectory,
+        prefix: prefix.path,
+        environment: ["HOME": fixture.root.path, "PATH": "/usr/bin:/bin"],
+        currentDirectory: fixture.root
+      )
+    }
+
+    #expect(!FileManager.default.fileExists(atPath: prefix.path))
+  }
+
+  @Test
   func failedPrepublicationSmokeTestLeavesThePreviousInstallUntouched() throws {
     let fixture = try makeCheckoutFixture()
     defer { withExtendedLifetime(fixture) {} }
