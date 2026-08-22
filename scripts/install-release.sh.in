@@ -86,7 +86,7 @@ then
 fi
 if [ "$arm64_capable" != "1" ]; then
   echo "GitHub release archives require an Apple Silicon Mac, not ${host_os}/${host_arch}." >&2
-  echo "Build from source on this host instead." >&2
+  echo "sim-use-network supports Apple Silicon Macs only." >&2
   exit 1
 fi
 

@@ -21,6 +21,33 @@ home_directory="$temporary_directory/home"
 prefix="$temporary_directory/prefix with space and 'quote"
 isolated_path="/usr/bin:/bin:/usr/sbin:/sbin"
 
+valid_versions=(
+  "v0.1.0"
+  "v1.2.3-rc.1"
+  "v1.2.3+build.001"
+  "v1.2.3-rc.1+build.001"
+)
+invalid_versions=(
+  "1.2.3"
+  "v01.2.3"
+  "v1.2.3.4"
+  "v1.2.3-.."
+  "v1.2.3-01"
+  "v1.2.3-alpha..1"
+  "v1.2.3+"
+)
+for version in "${valid_versions[@]}"; do
+  "$repo_root/scripts/validate-release-version.sh" "$version"
+done
+for version in "${invalid_versions[@]}"; do
+  if "$repo_root/scripts/validate-release-version.sh" "$version" \
+    > /dev/null 2>&1
+  then
+    echo "Release version validator unexpectedly accepted: $version" >&2
+    exit 1
+  fi
+done
+
 mkdir -p "$home_directory"
 "$repo_root/scripts/build-release.sh" \
   --version "$release_version" \

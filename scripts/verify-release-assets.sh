@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 usage() {
   cat <<'EOF'
 Usage: scripts/verify-release-assets.sh --version <tag> --repo <owner/repo> [--release-dir <dir>] [--archive-sha256 <sha256>]
@@ -44,10 +46,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! "$version" =~ ^v[0-9]+[.][0-9]+[.][0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-  echo "Release tag must look like v1.2.3." >&2
-  exit 1
-fi
+"$repo_root/scripts/validate-release-version.sh" "$version"
 if [[ ! "$release_repo" =~ ^[0-9A-Za-z_.-]+/[0-9A-Za-z_.-]+$ ]]; then
   echo "Release repo must look like owner/repo." >&2
   exit 1
@@ -57,7 +56,6 @@ if [[ -n "$archive_sha256" && ! "$archive_sha256" =~ ^[0-9A-Fa-f]{64}$ ]]; then
   exit 1
 fi
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ "$release_dir" = /* ]]; then
   release_base="$release_dir"
 else

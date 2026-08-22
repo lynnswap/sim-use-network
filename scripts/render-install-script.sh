@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 usage() {
   cat <<'EOF'
 Usage: scripts/render-install-script.sh --version <tag> --repo <owner/repo> --output <path>
@@ -39,10 +41,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! "$version" =~ ^v[0-9]+[.][0-9]+[.][0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-  echo "Release tag must look like v1.2.3." >&2
-  exit 1
-fi
+"$repo_root/scripts/validate-release-version.sh" "$version"
 if [[ ! "$release_repo" =~ ^[0-9A-Za-z_.-]+/[0-9A-Za-z_.-]+$ ]]; then
   echo "Release repo must look like owner/repo." >&2
   exit 1
@@ -53,7 +52,6 @@ if [[ -z "$output" ]]; then
   exit 1
 fi
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 template="$repo_root/scripts/install-release.sh.in"
 if [[ ! -f "$template" ]]; then
   echo "Missing installer template: $template" >&2

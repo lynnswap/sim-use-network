@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 usage() {
   cat <<'EOF'
 Usage: scripts/build-release.sh --version <tag> [--dist-root <dir>]
@@ -38,10 +40,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! "$version" =~ ^v[0-9]+[.][0-9]+[.][0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-  echo "Release tag must look like v1.2.3." >&2
-  exit 1
-fi
+"$repo_root/scripts/validate-release-version.sh" "$version"
 
 host_os="$(uname -s)"
 host_arch="$(uname -m)"
@@ -50,7 +49,6 @@ if [[ "$host_os" != "Darwin" || "$host_arch" != "arm64" ]]; then
   exit 1
 fi
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ "$dist_root" = /* ]]; then
   dist_base="$dist_root"
 else

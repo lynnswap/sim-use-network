@@ -36,10 +36,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! "${RELEASE_VERSION}" =~ ^v[0-9]+[.][0-9]+[.][0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Release tag must look like v1.2.3." >&2
-            exit 1
-          fi
+          scripts/validate-release-version.sh "${RELEASE_VERSION}"
           if [[ "${GITHUB_REF_TYPE}" != "branch" || "${GITHUB_REF_NAME}" != "${RELEASE_BRANCH}" ]]; then
             echo "Release workflow must be dispatched from ${RELEASE_BRANCH}." >&2
             echo "Actual ref: ${GITHUB_REF_TYPE} ${GITHUB_REF_NAME}" >&2
@@ -242,8 +239,9 @@ jobs:
             esac
           }
 
+          version_without_build="${RELEASE_VERSION%%+*}"
           release_kind_argument="--prerelease=false"
-          if [[ "${RELEASE_VERSION}" == *-* ]]; then
+          if [[ "${version_without_build}" == *-* ]]; then
             release_kind_argument="--prerelease"
           fi
 
