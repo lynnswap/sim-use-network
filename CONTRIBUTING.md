@@ -65,10 +65,10 @@ or dylib mapping alone. A dedicated Simulator must demonstrate:
 4. an online Mac canary in every phase;
 5. cleanup leaves neither app nor daemon mapping the shim;
 6. daemon-owned/background behavior is classified without treating deferral as
-   failure: a new background task may wait for connectivity, while only a
-   terminal transport error is rejection evidence. To validate an already-
-   active daemon connection, use a controlled long-running transfer and record
-   its terminal result separately.
+   failure: a new background task remains submitted until Foundation provides a
+   terminal result, and only a terminal transport error is rejection evidence.
+   To validate an already-active daemon connection, use a controlled long-
+   running transfer and record its terminal result separately.
 
 Record the Xcode build, CoreSimulator build, platform, runtime version/build,
 architecture, canonical daemon domain, and shim ABI as test evidence.

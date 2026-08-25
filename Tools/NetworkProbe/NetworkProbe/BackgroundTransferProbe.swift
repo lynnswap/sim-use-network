@@ -10,10 +10,8 @@ enum BackgroundTransferProbe {
         withIdentifier:
           "io.github.lynnswap.sim-use-network.NetworkProbe.background.\(UUID().uuidString)"
       )
-      // Background sessions always wait for connectivity; the model exposes
-      // that state.
-      configuration.timeoutIntervalForRequest = 15
-      configuration.timeoutIntervalForResource = 30
+      // Background sessions expose no connectivity-waiting callback, so the
+      // probe classifies only terminal delegate results.
 
       let session = URLSession(
         configuration: configuration,
