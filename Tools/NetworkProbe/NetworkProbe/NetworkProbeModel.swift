@@ -9,12 +9,14 @@ struct NetworkPathSnapshot: Equatable, Sendable {
   let interfaces: [String]
   let isExpensive: Bool
   let isConstrained: Bool
+  let isSatisfied: Bool
 
   static let waiting = NetworkPathSnapshot(
     status: "Waiting",
     interfaces: [],
     isExpensive: false,
-    isConstrained: false
+    isConstrained: false,
+    isSatisfied: false
   )
 
   nonisolated init(path: NWPath) {
@@ -34,18 +36,21 @@ struct NetworkPathSnapshot: Equatable, Sendable {
       .sorted()
     isExpensive = path.isExpensive
     isConstrained = path.isConstrained
+    isSatisfied = path.status == .satisfied
   }
 
   private init(
     status: String,
     interfaces: [String],
     isExpensive: Bool,
-    isConstrained: Bool
+    isConstrained: Bool,
+    isSatisfied: Bool
   ) {
     self.status = status
     self.interfaces = interfaces
     self.isExpensive = isExpensive
     self.isConstrained = isConstrained
+    self.isSatisfied = isSatisfied
   }
 
   private nonisolated static func interfaceName(_ type: NWInterface.InterfaceType) -> String {
@@ -88,6 +93,7 @@ struct ProbeFailure: Equatable, Error, Sendable {
 enum RequestStatus: Equatable, Sendable {
   case idle
   case running
+  case waitingForConnectivity
   case succeeded(
     statusCode: Int,
     byteCount: Int64,
@@ -101,6 +107,8 @@ enum RequestStatus: Equatable, Sendable {
       "Not Run"
     case .running:
       "Running"
+    case .waitingForConnectivity:
+      "Waiting for Connectivity"
     case .succeeded(let statusCode, let byteCount, _):
       "HTTP \(statusCode), \(byteCount) bytes"
     case .failed(let failure):
@@ -120,13 +128,13 @@ enum RequestStatus: Equatable, Sendable {
         : "\(protocolName), new connection"
     case .failed(let failure):
       return failure.message
-    case .idle, .running:
+    case .idle, .running, .waitingForConnectivity:
       return nil
     }
   }
 
   var isRunning: Bool {
-    self == .running
+    self == .running || self == .waitingForConnectivity
   }
 }
 
@@ -212,7 +220,9 @@ final class NetworkProbeModel {
       return
     }
 
-    backgroundStatus = .running
+    backgroundStatus = pathSnapshot.isSatisfied
+      ? .running
+      : .waitingForConnectivity
     backgroundStatus = await BackgroundTransferProbe.run(request: request)
   }
 

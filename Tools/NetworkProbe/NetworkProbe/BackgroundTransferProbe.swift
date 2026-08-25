@@ -10,7 +10,8 @@ enum BackgroundTransferProbe {
         withIdentifier:
           "io.github.lynnswap.sim-use-network.NetworkProbe.background.\(UUID().uuidString)"
       )
-      configuration.waitsForConnectivity = false
+      // Background sessions always wait for connectivity; the model exposes
+      // that state.
       configuration.timeoutIntervalForRequest = 15
       configuration.timeoutIntervalForResource = 30
 

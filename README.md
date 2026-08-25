@@ -150,7 +150,7 @@ swift run sim-use-network prepare \
 
 # In NetworkProbe, run the foreground request once while available.
 swift run sim-use-network unavailable
-# Run both request actions and inspect the path rows.
+# Wait for the path row to update, then run both request actions.
 swift run sim-use-network available
 # Run both request actions again and verify recovery.
 swift run sim-use-network cleanup
@@ -159,8 +159,12 @@ swift run sim-use-network cleanup
 Repeated foreground requests use the same session, and the result row reports
 whether `URLSession` marked the latest transaction as a reused persistent
 connection. The background action uses a background `URLSession`, whose
-transfer is performed by the system process. The app never changes network
-availability; the CLI remains the only owner of that lifecycle.
+transfer is performed by the system process. Background sessions always wait
+for connectivity, so a task started after the path becomes unavailable is shown
+as `Waiting for Connectivity` unless Foundation delivers a terminal transport
+error. A later success after `available` means the system deferred the task; it
+is not offline-failure evidence. The app never changes network availability;
+the CLI remains the only owner of that lifecycle.
 
 ## Agent skill
 
