@@ -238,14 +238,14 @@ final class NetworkProbeModel {
     guard
       var components = URLComponents(string: endpoint),
       let scheme = components.scheme?.lowercased(),
-      scheme == "http" || scheme == "https",
+      scheme == "https",
       components.host != nil
     else {
       return .failure(
         ProbeFailure(
           domain: "NetworkProbe",
           code: 1,
-          message: "Enter an absolute HTTP or HTTPS URL."
+          message: "Enter an absolute HTTPS URL."
         )
       )
     }
