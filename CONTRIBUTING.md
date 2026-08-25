@@ -11,6 +11,7 @@ swift test
 ./scripts/test-source-install.sh
 ./scripts/test-release-install.sh
 ./scripts/test-runtime-shim.sh
+./scripts/test-network-probe-build.sh
 actionlint
 git diff --check
 ```
@@ -68,6 +69,11 @@ or dylib mapping alone. A dedicated Simulator must demonstrate:
 Record the Xcode build, CoreSimulator build, platform, runtime version/build,
 architecture, canonical daemon domain, and shim ABI as test evidence.
 Undocumented observations must not be presented as public Apple contracts.
+
+The checked-in `NetworkProbe` app provides the app-side observations for this
+gate. Its build script verifies the shared SwiftUI source on iOS Simulator,
+macOS, and visionOS Simulator, but a successful build is not runtime evidence.
+Use a dedicated Simulator and the lifecycle above when validating behavior.
 
 ## Pull requests
 
