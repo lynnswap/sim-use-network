@@ -11,6 +11,7 @@ swift test
 ./scripts/test-source-install.sh
 ./scripts/test-release-install.sh
 ./scripts/test-runtime-shim.sh
+./scripts/test-network-probe-build.sh
 actionlint
 git diff --check
 ```
@@ -63,11 +64,22 @@ or dylib mapping alone. A dedicated Simulator must demonstrate:
 3. restored path and HTTP behavior;
 4. an online Mac canary in every phase;
 5. cleanup leaves neither app nor daemon mapping the shim;
-6. a daemon-owned/background URLSession path fails while unavailable.
+6. daemon-owned/background behavior is classified without treating deferral as
+   failure: a new background task remains submitted until Foundation provides a
+   terminal result, and only a terminal transport error is rejection evidence.
+   To validate an already-active daemon connection, use a controlled long-
+   running transfer and record its terminal result separately.
 
 Record the Xcode build, CoreSimulator build, platform, runtime version/build,
 architecture, canonical daemon domain, and shim ABI as test evidence.
 Undocumented observations must not be presented as public Apple contracts.
+
+The checked-in `NetworkProbe` app provides the app-side observations for this
+gate. Its build script verifies the shared SwiftUI source on iOS Simulator,
+macOS, and visionOS Simulator, but a successful build is not runtime evidence.
+Use a dedicated Simulator and the lifecycle above when validating behavior.
+The probe covers one `prepare`-to-`cleanup` app-process lifetime and does not
+test background-session reassociation after an OS relaunch.
 
 ## Pull requests
 

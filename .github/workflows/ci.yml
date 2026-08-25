@@ -36,6 +36,9 @@ jobs:
       - name: Run runtime shim unit tests
         run: ./scripts/test-runtime-shim.sh
 
+      - name: Build network probe app
+        run: ./scripts/test-network-probe-build.sh
+
       - name: Compile runtime shim for every Simulator SDK
         shell: bash
         run: |

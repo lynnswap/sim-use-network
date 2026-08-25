@@ -9,6 +9,10 @@
    observe-act-verify UI loop against the same device UDID.
 3. A developer runs one source-checkout command that builds the CLI, publishes
    its complete resource payload, and receives actionable PATH guidance.
+4. A developer opens the top-level workspace and runs a repository-owned app
+   that exposes network path, foreground request, and background request state
+   during one prepared app-process lifetime without importing the tool's
+   implementation modules.
 
 The package distributes the runtime CLI and a source installer as separate
 executable products. There is no public Swift library surface:
@@ -33,6 +37,24 @@ Simulator dynamic library have different destination triples, so the CLI builds
 one platform-specific artifact with the selected Xcode toolchain during
 `prepare`.
 
+`NetworkProbe.app` is an independent black-box target rather than another
+package product. Its SwiftUI source is shared by iOS, macOS, and visionOS. The
+app owns only observations and request lifecycle; `NetworkSessionController`
+continues to own unavailable-state mutation and cleanup.
+
+The probe disables background-session launch events. It observes daemon-owned
+transfers while the app process launched by `prepare` remains alive; background
+session reassociation after an OS relaunch is a separate consumer story and is
+not part of this validation target.
+
+```text
+sim-use-network CLI -- launch/inject/state --> NetworkProbe.app
+
+NetworkProbe.app -> Network.framework path observation
+                 -> foreground URLSession owned by the app process
+                 -> background URLSession owned by the system process
+```
+
 ## Owners
 
 | Invariant | Owner |
@@ -44,6 +66,9 @@ one platform-specific artifact with the selected Xcode toolchain during
 | Platform-specific artifact | `RuntimeArtifactCompiler` |
 | App path state | Shim loaded in the target app process |
 | New `URLSession` connection failure | Shim loaded in that Simulator's `nsurlsessiond` |
+| Probe path and foreground request state | `NetworkProbeModel` |
+| Probe foreground connection metrics | `ForegroundRequestMetricsDelegate` |
+| Probe background transfer completion | `BackgroundDownloadDelegate` |
 | Available/unavailable source of truth | Session-specific Darwin notify state |
 | Signal-safe process-local state | Shim dispatch callback and lock-free atomic |
 | Applied-state completion | Per-process app/daemon acknowledgement keys |

@@ -121,6 +121,57 @@ restores available state when possible, terminates the
 tool-launched app, restarts the selected Simulator's URL loading daemon without
 injection, verifies removal, and deletes the session artifacts.
 
+## Network probe app
+
+The repository includes a standalone SwiftUI app for repeatable manual checks.
+Open [`sim-use-network.xcworkspace`](sim-use-network.xcworkspace) and run the
+shared `NetworkProbe` scheme. The same source builds for iOS, macOS, and
+visionOS; Simulator injection is tested by installing the app on the Simulator
+selected by `SIM_USE_DEVICE`.
+
+The app has no dependency on `SimUseNetworkCore`. It observes the same boundary
+as any other installed app and shows the following values in a native `List`:
+
+- current `NWPath` status and available interfaces;
+- foreground request results, protocol, and connection-reuse metrics from one
+  long-lived `URLSession`;
+- background download results from a system-owned session;
+- raw error domain, code, and description.
+
+The endpoint defaults to `https://example.com/` and is persisted across the
+terminate-and-relaunch performed by `prepare`. Requests append a unique query
+item and bypass the local URL cache. Use the stable bundle identifier below:
+
+```bash
+export SIM_USE_DEVICE=<SIMULATOR_UDID>
+
+swift run sim-use-network prepare \
+  --app io.github.lynnswap.sim-use-network.NetworkProbe
+
+# In NetworkProbe, run the foreground request once while available.
+swift run sim-use-network unavailable
+# Wait for the path row to update, then run both request actions.
+swift run sim-use-network available
+# Run both request actions again and verify recovery.
+swift run sim-use-network cleanup
+```
+
+Repeated foreground requests use the same session, and the result row reports
+whether `URLSession` marked the latest transaction as a reused persistent
+connection. The background action uses a background `URLSession`, whose
+transfer is performed by the system process. Background sessions always wait
+for connectivity and provide no delegate callback for that waiting state. The
+app therefore shows `Submitted to System` until Foundation delivers a terminal
+success or failure; it does not infer task state from the app process's path. A
+later success after `available` is compatible with system deferral and is not
+offline-failure evidence. The app never changes network availability; the CLI
+remains the only owner of that lifecycle.
+
+The probe deliberately disables background-session launch events and observes
+only the app process started by `prepare`. Keep that process running until
+`cleanup`; reconnecting background sessions after an OS relaunch is outside the
+probe's validation scope.
+
 ## Agent skill
 
 Install the bundled skill into Codex or Claude:
