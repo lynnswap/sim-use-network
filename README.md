@@ -167,6 +167,11 @@ later success after `available` is compatible with system deferral and is not
 offline-failure evidence. The app never changes network availability; the CLI
 remains the only owner of that lifecycle.
 
+The probe deliberately disables background-session launch events and observes
+only the app process started by `prepare`. Keep that process running until
+`cleanup`; reconnecting background sessions after an OS relaunch is outside the
+probe's validation scope.
+
 ## Agent skill
 
 Install the bundled skill into Codex or Claude:

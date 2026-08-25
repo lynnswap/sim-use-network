@@ -10,6 +10,10 @@ enum BackgroundTransferProbe {
         withIdentifier:
           "io.github.lynnswap.sim-use-network.NetworkProbe.background.\(UUID().uuidString)"
       )
+      // This probe observes one prepared app-process lifetime and deliberately
+      // opts out of the separate background-relaunch lifecycle.
+      configuration.sessionSendsLaunchEvents = false
+
       // Background sessions expose no connectivity-waiting callback, so the
       // probe classifies only terminal delegate results.
 

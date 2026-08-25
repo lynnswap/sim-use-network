@@ -11,7 +11,8 @@
    its complete resource payload, and receives actionable PATH guidance.
 4. A developer opens the top-level workspace and runs a repository-owned app
    that exposes network path, foreground request, and background request state
-   without importing the tool's implementation modules.
+   during one prepared app-process lifetime without importing the tool's
+   implementation modules.
 
 The package distributes the runtime CLI and a source installer as separate
 executable products. There is no public Swift library surface:
@@ -40,6 +41,11 @@ one platform-specific artifact with the selected Xcode toolchain during
 package product. Its SwiftUI source is shared by iOS, macOS, and visionOS. The
 app owns only observations and request lifecycle; `NetworkSessionController`
 continues to own unavailable-state mutation and cleanup.
+
+The probe disables background-session launch events. It observes daemon-owned
+transfers while the app process launched by `prepare` remains alive; background
+session reassociation after an OS relaunch is a separate consumer story and is
+not part of this validation target.
 
 ```text
 sim-use-network CLI -- launch/inject/state --> NetworkProbe.app

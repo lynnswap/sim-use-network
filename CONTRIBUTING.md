@@ -78,6 +78,8 @@ The checked-in `NetworkProbe` app provides the app-side observations for this
 gate. Its build script verifies the shared SwiftUI source on iOS Simulator,
 macOS, and visionOS Simulator, but a successful build is not runtime evidence.
 Use a dedicated Simulator and the lifecycle above when validating behavior.
+The probe covers one `prepare`-to-`cleanup` app-process lifetime and does not
+test background-session reassociation after an OS relaunch.
 
 ## Pull requests
 
