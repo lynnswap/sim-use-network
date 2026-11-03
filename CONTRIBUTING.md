@@ -24,7 +24,7 @@ the tag's leading `v`, such as `0.1.0`, before the artifacts are distributed.
 ## Release process
 
 Run the `Release` workflow from the current `main` commit with the intended tag,
-such as `v0.1.0`. It reruns CI, builds and verifies the Apple Silicon archive,
+such as `v0.1.0`. It creates the tag at that commit first, then reruns CI, builds and verifies the Apple Silicon archive,
 and creates or repairs a draft GitHub release with exactly these assets:
 
 - `install.sh`
@@ -32,8 +32,10 @@ and creates or repairs a draft GitHub release with exactly these assets:
 - `sim-use-network-darwin-arm64.tar.gz`
 
 Review the target commit, release notes, and assets before publishing the draft.
-Do not create or push the tag manually; publishing the draft is the release
-boundary.
+The source tag is available during validation; the downloadable release remains
+a draft until you publish it manually. Failed checks leave the tag in place.
+Reruns reuse a matching tag and reject conflicting tags. A fix that changes the
+source commit needs a new version.
 
 The runtime C source must compile with warnings as errors for each Simulator SDK
 present in the selected Xcode:
